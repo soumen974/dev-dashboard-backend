@@ -52,7 +52,7 @@ const sendVerificationEmail = async (email, code) => {
   await transporter.sendMail(mailOptions);
 };
 
-const register = [
+const register =  [
   body('email').isEmail().withMessage('Invalid email address'),
   async (req, res) => {
     const errors = validationResult(req);
@@ -75,7 +75,7 @@ const register = [
     try {
       const verificationCode = await generateVerificationCode(email);
       await sendVerificationEmail(email, verificationCode);
-      res.status(201).json({ message: `Verification code sent to ${email} ` });
+      res.status(201).json({ message: `Verification code ${verificationCode} sent to ${email} ` });
     } catch (err) {
       res.status(500).send(`Error creating verification entry: ${err.toString()}`);
     }
@@ -112,7 +112,7 @@ const verifyEmail = [
 
 const addpassword = [
   body('email').isEmail().withMessage('Invalid email address'),
-  body('name').notEmpty().withMessage('Enter your name'),  
+  body('username').notEmpty().withMessage('Enter your username'),
   body('password').isLength({ min: 5 }).withMessage('Password must be at least 5 characters long'),
   async (req, res) => {
     const errors = validationResult(req);
@@ -121,28 +121,54 @@ const addpassword = [
     }
 
     const {
-      email, password, username, name,
-        security_question, security_answer
+      name,
+      email, password, username,
+      security_question, security_answer
     } = req.body;
 
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      const insertUserQuery = `INSERT INTO devs (email, password, username, name,security_question, security_answer)
-                               VALUES (?, ?, ?, ?, ?, ?)`;
+      const insertUserQuery = `INSERT INTO devs (name,email, password, username, security_question, security_answer)
+                               VALUES (?, ?, ?, ?, ? ,?)`;
 
       await executeQuery(insertUserQuery, [
+        name || '',
         email,
         hashedPassword,
-        username || '',
-        name || '',
+        username,
         security_question || '',
         security_answer || '',
       ]);
 
-      res.status(201).json({ message: 'Developer Added successfully' });
+      res.status(201).json({ message: 'Developer added successfully' });
     } catch (err) {
-      res.status(500).json({ error: `Error Adding Developer: ${err.message}` });
+      res.status(500).json({ error: `Error adding developer: ${err.message}` });
+    }
+  }
+];
+
+const checkUsername = [
+  body('username').notEmpty().withMessage('Enter your username'),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { username } = req.body;
+
+    try {
+      const checkUserQuery = `SELECT COUNT(*) AS count FROM devs WHERE username = ?`;
+      const result = await executeQuery(checkUserQuery, [username]);
+
+      if (result[0].count > 0) {
+        res.status(200).json({ exists: true, message: 'Username already exists' });
+      } else {
+        res.status(200).json({ exists: false, message: 'Username is available' });
+      }
+    } catch (err) {
+      res.status(500).json({ error: `Error checking username: ${err.message}` });
     }
   }
 ];
@@ -192,4 +218,4 @@ const protectedRoute = (req, res) => {
     developer_data: req.devs 
   });};
 
-module.exports = { register, verifyEmail, login, logout, protectedRoute,addpassword };
+module.exports = { register, verifyEmail, login, logout, protectedRoute,addpassword,checkUsername };

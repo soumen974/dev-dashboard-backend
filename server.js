@@ -25,7 +25,7 @@ app.use(cors({
 
 
 app.get('/', (req, res) => {
-  res.send('Hello World!');
+  res.send('Welcome to Developer dashboard : Backend');
 });
 
 // all routes related to authentication
