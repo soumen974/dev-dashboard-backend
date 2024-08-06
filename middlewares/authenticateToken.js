@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+
 function authenticateToken(req, res, next) {
   const token = req.cookies.token; // Ensure this matches your token name
 
@@ -16,7 +17,7 @@ function authenticateToken(req, res, next) {
 
     // Attach user information to request object
     req.devs = {
-      name: decoded.name,
+      username: decoded.username,
       id: decoded.id,
       email: decoded.email,
     };

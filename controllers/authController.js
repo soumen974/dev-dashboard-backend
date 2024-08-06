@@ -120,17 +120,21 @@ const addpassword = [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const {
-      name,
-      email, password, username,
-      security_question, security_answer
-    } = req.body;
+    const { name, email, password, username, security_question, security_answer } = req.body;
 
     try {
+      // Check if the username already exists
+      const checkUsernameQuery = 'SELECT * FROM devs WHERE username = ?';
+      const usersWithUsername = await executeQuery(checkUsernameQuery, [username]);
+
+      if (usersWithUsername.length > 0) {
+        return res.status(400).json({ error: 'Username is already taken' });
+      }
+
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      const insertUserQuery = `INSERT INTO devs (name,email, password, username, security_question, security_answer)
-                               VALUES (?, ?, ?, ?, ? ,?)`;
+      const insertUserQuery = `INSERT INTO devs (name, email, password, username, security_question, security_answer)
+                               VALUES (?, ?, ?, ?, ?, ?)`;
 
       await executeQuery(insertUserQuery, [
         name || '',
@@ -149,13 +153,17 @@ const addpassword = [
 ];
 
 const checkUsername = [
-  body('username').notEmpty().withMessage('Enter your username'),
-  async (req, res) => {
+  body('username').notEmpty().withMessage('your username'),
+
+  async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
+    next();
+  },
 
+  async (req, res) => {
     const { username } = req.body;
 
     try {
@@ -174,7 +182,6 @@ const checkUsername = [
 ];
 
 
-
 const login = [
   body('email').isEmail(),
   body('password').isLength({ min: 5 }),
@@ -189,8 +196,12 @@ const login = [
         try {
           const match = await bcrypt.compare(password, user.password);
           if (match) {
-            const token = jwt.sign({ id: user.id, email: user.email, name: user.name }, process.env.SECRET_KEY, { expiresIn: '5d' });
-            res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'Strict' }); 
+            const token = jwt.sign(
+              { id: user.id, email: user.email, username: user.username },
+              process.env.SECRET_KEY,
+              { expiresIn: '5d' }
+            );
+            res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'Strict'});
             return res.status(200).json({ message: 'Developer Login successfully' });
           } else {
             return res.status(401).json({ error: 'Invalid credentials' });
@@ -207,6 +218,7 @@ const login = [
   }
 ];
 
+
 const logout = (req, res) => {
   res.clearCookie('token');
   res.status(200).send('Logout successful');
@@ -216,6 +228,8 @@ const protectedRoute = (req, res) => {
   res.status(200).json({ 
     message: 'This is a protected route', 
     developer_data: req.devs 
-  });};
+  })
+  // redirect('http://localhost:3000/dashboard');
+  ;};
 
 module.exports = { register, verifyEmail, login, logout, protectedRoute,addpassword,checkUsername };
