@@ -222,6 +222,7 @@ const login = [
 const logout = (req, res) => {
   res.clearCookie('token');
   res.status(200).send('Logout successful');
+  
 };
 
 const protectedRoute = (req, res) => {
