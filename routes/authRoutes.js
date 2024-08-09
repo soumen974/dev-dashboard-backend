@@ -1,5 +1,11 @@
 const express = require('express');
-const { register, verifyEmail, login, logout, protectedRoute,addpassword,checkUsername } = require('../controllers/authController');
+const { register,
+    verifyEmail,
+    login,
+    logout,
+    protectedRoute,
+    addpassword,
+    checkUsername } = require('../controllers/authController');
 // const validateRequest = require('../middlewares/validateRequest');
 const validateRequest=require('../middlewares/validationRequest')
 const authenticateToken=require('../middlewares/authenticateToken')

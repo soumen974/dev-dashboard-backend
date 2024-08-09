@@ -1,13 +1,27 @@
-const mariadb = require('mariadb');
+const { MongoClient } = require('mongodb');
 require('dotenv').config();
 
-const pool = mariadb.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  connectionLimit: 5
+
+const mongoClient = new MongoClient(process.env.mongo_url, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  connectTimeoutMS: 10000,  // 10 seconds
+  socketTimeoutMS: 45000, 
 });
 
-module.exports = pool;
 
+let mongoDb;
+async function connectMongoDB() {
+  try {
+    await mongoClient.connect();
+    mongoDb = mongoClient.db(process.env.DB_NAME);
+    console.log('Connected to MongoDB');
+  } catch (err) {
+    console.error('Error connecting to MongoDB', err);
+  }
+}
+
+// Initialize MongoDB connection
+connectMongoDB();
+
+module.exports = mongoDb;

@@ -1,20 +1,12 @@
-const pool = require('../models/db');
 
-const executeQuery = async (query, params) => {
-  let conn;
+const executeQuery = async (operation) => {
   try {
-    conn = await pool.getConnection();
-    const rows = await conn.query(query, params);
-    return JSON.parse(JSON.stringify(rows, (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    ));
+    const result = await operation();
+    return result;
   } catch (err) {
+    console.error('Error executing MongoDB operation:', err);
     throw err;
-  } finally {
-    if (conn) conn.release();
   }
 };
-
-
 
 module.exports = executeQuery;

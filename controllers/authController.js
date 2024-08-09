@@ -1,32 +1,32 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
-const executeQuery = require('../utils/executeQuery');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
+
+const Dev = require('../models/devs');
+const email_verifications = require('../models/email_verifications');
+const executeQuery = require('../utils/executeQuery');
 
 const transporter = nodemailer.createTransport({
   service: 'Gmail',
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
 const generateVerificationCode = async (email) => {
-  if (!email) {
-    throw new Error("Email cannot be null or undefined");
-  }
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 6 * 60000);
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit code
-  const expiresAt = new Date(Date.now() + 6 * 60000); // Set expiration time to 6 minutes from now
-
-  const query = `
-    INSERT INTO email_verifications (email, code, created_at, expires_at)
-    VALUES (?, ?, CURRENT_TIMESTAMP, ?)
-    ON DUPLICATE KEY UPDATE code = VALUES(code), created_at = CURRENT_TIMESTAMP, expires_at = VALUES(expires_at)
-  `;
-  await executeQuery(query, [email, code, expiresAt]);
+  await executeQuery(() =>
+    email_verifications.updateOne(
+      { email },
+      { email, code, created_at: new Date(), expires_at: expiresAt },
+      { upsert: true }
+    )
+  );
 
   return code;
 };
@@ -45,14 +45,14 @@ const sendVerificationEmail = async (email, code) => {
       <img src="https://img.freepik.com/free-vector/welcome-concept-landing-page_52683-22680.jpg?w=826&t=st=1721567675~exp=1721568275~hmac=dc999ada0dd9fdd11e4b0b3b0729516dbc808929a1f1de79594b4bcca1a250c8" alt="Welcome Image" style="width: 100%; max-width: 600px; margin-top: 20px; border-radius: 10px;">
       <p style="color: #777; font-size: 14px; margin-top: 20px;">If you did not request this code, please ignore this email.</p>
       <p style="color: #777; font-size: 14px;">Best regards,</p>
-      <p style="color: #777; font-size: 14px;">The Team Soumen Bhunia</p>
+      <a href="https://soumenbhunia.vercel.app/" style="color: #777; font-style: underline; font-size: 14px;">The Team Soumen Bhunia</a>
     </div>
-  `
+  `,
   };
   await transporter.sendMail(mailOptions);
 };
 
-const register =  [
+const register = [
   body('email').isEmail().withMessage('Invalid email address'),
   async (req, res) => {
     const errors = validationResult(req);
@@ -62,24 +62,19 @@ const register =  [
 
     const { email } = req.body;
 
-    const checkQuery = 'SELECT COUNT(*) AS count FROM devs WHERE email = ?';
     try {
-      const checkResult = await executeQuery(checkQuery, [email]);
-      if (checkResult[0].count > 0) {
+      const existingDev = await executeQuery(() => Dev.findOne({ email }));
+      if (existingDev) {
         return res.status(400).json({ error: 'Developer already exists' });
       }
-    } catch (err) {
-      return res.status(500).send(`Error checking email: ${err.toString()}`);
-    }
 
-    try {
       const verificationCode = await generateVerificationCode(email);
       await sendVerificationEmail(email, verificationCode);
-      res.status(201).json({ message: `Verification code ${verificationCode} sent to ${email} ` });
+      res.status(201).json({ message: `Verification code ${verificationCode} sent to ${email}` });
     } catch (err) {
-      res.status(500).send(`Error creating verification entry: ${err.toString()}`);
+      res.status(500).json({ error: `Error during registration: ${err.message}` });
     }
-  }
+  },
 ];
 
 const verifyEmail = [
@@ -93,21 +88,22 @@ const verifyEmail = [
 
     const { email, code } = req.body;
 
-    const checkVerificationQuery = 'SELECT * FROM email_verifications WHERE email = ? AND code = ? AND expires_at > CURRENT_TIMESTAMP';
     try {
-      const checkResult = await executeQuery(checkVerificationQuery, [email, code]);
-      if (checkResult.length === 0) {
+      const verification = await executeQuery(() =>
+        email_verifications.findOne({ email, code, expires_at: { $gt: new Date() } })
+      );
+
+      if (!verification) {
         return res.status(400).json({ error: 'Invalid or expired verification code' });
       }
 
-      const deleteVerificationQuery = 'DELETE FROM email_verifications WHERE email = ?';
-      await executeQuery(deleteVerificationQuery, [email]);
+      await executeQuery(() => email_verifications.deleteOne({ email }));
 
       res.status(200).json({ message: 'Email verified successfully' });
     } catch (err) {
-      res.status(500).send(`Error verifying email: ${err.toString()}`);
+      res.status(500).json({ error: `Error verifying email: ${err.message}` });
     }
-  }
+  },
 ];
 
 const addpassword = [
@@ -123,38 +119,33 @@ const addpassword = [
     const { name, email, password, username, security_question, security_answer } = req.body;
 
     try {
-      // Check if the username already exists
-      const checkUsernameQuery = 'SELECT * FROM devs WHERE username = ?';
-      const usersWithUsername = await executeQuery(checkUsernameQuery, [username]);
-
-      if (usersWithUsername.length > 0) {
+      const existingUsername = await executeQuery(() => Dev.findOne({ username }));
+      if (existingUsername) {
         return res.status(400).json({ error: 'Username is already taken' });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      const insertUserQuery = `INSERT INTO devs (name, email, password, username, security_question, security_answer)
-                               VALUES (?, ?, ?, ?, ?, ?)`;
-
-      await executeQuery(insertUserQuery, [
-        name || '',
+      const newDev = new Dev({
+        name: name || '',
         email,
-        hashedPassword,
+        password: hashedPassword,
         username,
-        security_question || '',
-        security_answer || '',
-      ]);
+        security_question: security_question || '',
+        security_answer: security_answer || '',
+      });
+
+      await executeQuery(() => newDev.save());
 
       res.status(201).json({ message: 'Developer added successfully' });
     } catch (err) {
       res.status(500).json({ error: `Error adding developer: ${err.message}` });
     }
-  }
+  },
 ];
 
 const checkUsername = [
-  body('username').notEmpty().withMessage('your username'),
-
+  body('username').notEmpty().withMessage('Your username'),
   async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -162,15 +153,13 @@ const checkUsername = [
     }
     next();
   },
-
   async (req, res) => {
     const { username } = req.body;
 
     try {
-      const checkUserQuery = `SELECT COUNT(*) AS count FROM devs WHERE username = ?`;
-      const result = await executeQuery(checkUserQuery, [username]);
+      const userExists = await executeQuery(() => Dev.exists({ username }));
 
-      if (result[0].count > 0) {
+      if (userExists) {
         res.status(200).json({ exists: true, message: 'Username already exists' });
       } else {
         res.status(200).json({ exists: false, message: 'Username is available' });
@@ -178,59 +167,57 @@ const checkUsername = [
     } catch (err) {
       res.status(500).json({ error: `Error checking username: ${err.message}` });
     }
-  }
+  },
 ];
-
 
 const login = [
   body('email').isEmail(),
   body('password').isLength({ min: 5 }),
   async (req, res) => {
     const { email, password } = req.body;
-    const query = 'SELECT * FROM devs WHERE email = ?';
 
     try {
-      const rows = await executeQuery(query, [email]);
-      if (rows.length > 0) {
-        const user = rows[0];
-        try {
-          const match = await bcrypt.compare(password, user.password);
-          if (match) {
-            const token = jwt.sign(
-              { id: user.id, email: user.email, username: user.username },
-              process.env.SECRET_KEY,
-              { expiresIn: '5d' }
-            );
-            res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'Strict'});
-            return res.status(200).json({ message: 'Developer Login successfully' });
-          } else {
-            return res.status(401).json({ error: 'Invalid credentials' });
-          }
-        } catch (err) {
-          return res.status(500).json({ error: 'Error comparing passwords' });
+      const dev = await executeQuery(() => Dev.findOne({ email }));
+      if (dev) {
+        const match = await bcrypt.compare(password, dev.password);
+        if (match) {
+          const token = jwt.sign(
+            { id: dev._id, email: dev.email, username: dev.username },
+            process.env.SECRET_KEY,
+            { expiresIn: '5d' }
+          );
+          res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'Strict' });
+          return res.status(200).json({ message: 'Developer Login successfully' });
+        } else {
+          return res.status(401).json({ error: 'Invalid credentials' });
         }
       } else {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
     } catch (err) {
-      return res.status(500).json({ error: `Error logging in: ${err.toString()}` });
+      res.status(500).json({ error: `Error logging in: ${err.message}` });
     }
-  }
+  },
 ];
-
 
 const logout = (req, res) => {
   res.clearCookie('token');
   res.status(200).send('Logout successful');
-  
 };
 
 const protectedRoute = (req, res) => {
-  res.status(200).json({ 
-    message: 'This is a protected route', 
-    developer_data: req.devs 
-  })
-  // redirect('http://localhost:3000/dashboard');
-  ;};
+  res.status(200).json({
+    message: 'This is a protected route',
+    developer_data: req.devs,
+  });
+};
 
-module.exports = { register, verifyEmail, login, logout, protectedRoute,addpassword,checkUsername };
+module.exports = {
+  register,
+  verifyEmail,
+  login,
+  logout,
+  protectedRoute,
+  addpassword,
+  checkUsername,
+};
