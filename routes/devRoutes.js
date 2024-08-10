@@ -4,7 +4,7 @@ const {getAllDevs,getUserById,updateUserById}=require('../controllers/devControl
 const authenticateToken=require('../middlewares/authenticateToken');
 const router=express.Router();
 
-router.get('/all',getAllDevs);
+router.get('/all',authenticateToken,getAllDevs);
 router.get('/one',authenticateToken,getUserById);
 router.put('/update',authenticateToken,updateUserById);
 
