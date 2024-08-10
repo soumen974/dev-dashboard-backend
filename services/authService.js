@@ -1,23 +1,33 @@
-const email_verifications = require('../models/email_verifications');
-const executeQuery = require('../utils/executeQuery');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const Devs = require('../models/devs');
 
+exports.registerUser = async (devData) => {
+    const { username, name, email, password, security_question, security_answer } = devData;
 
-const generateVerificationCode = async (email) => {
-  const code = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit random code
-  const expiresAt = new Date(Date.now() + 6 * 60000); // Set expiry to 6 minutes from now
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedSecurityAnswer = await bcrypt.hash(security_answer, 10);
 
-  // Using `updateOne` with `upsert` to either update an existing document or insert a new one
-  await executeQuery(() =>
-    email_verifications.updateOne(
-      { email }, // Filter by email
-      { email, code, created_at: new Date(), expires_at: expiresAt }, // Update or insert these fields
-      { upsert: true } // Create a new document if no matching document is found
-    )
-  );
+    const dev = new Devs({
+        username,
+        name,
+        email,
+        password: hashedPassword,
+        security_question,
+        security_answer: hashedSecurityAnswer,
+    });
 
-  return code; // Return the generated code
+    await dev.save();
+    return dev;
 };
 
-module.exports = {
-  generateVerificationCode,
+exports.verifyUser = async (email, password) => {
+    const dev = await Devs.findOne({ email });
+    if (!dev) throw new Error('Invalid email or password');
+
+    const isMatch = await bcrypt.compare(password, dev.password);
+    if (!isMatch) throw new Error('Invalid email or password');
+
+    const token = jwt.sign({ id: dev._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    return token;
 };

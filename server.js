@@ -9,10 +9,14 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const devRoutes = require('./routes/devRoutes');
+const connectDB = require('./models/db');
+connectDB();
+
 require('dotenv').config();
 
 const executeQuery = require('./utils/executeQuery');
 const authRoutes = require('./routes/authRoutes');
+
 
 app.use(cors({
     origin: 'http://localhost:3000',

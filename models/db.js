@@ -1,27 +1,21 @@
-const { MongoClient } = require('mongodb');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
-
-const mongoClient = new MongoClient(process.env.mongo_url, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  connectTimeoutMS: 10000,  // 10 seconds
-  socketTimeoutMS: 45000, 
-});
-
-
-let mongoDb;
-async function connectMongoDB() {
+const connectDB = async () => {
   try {
-    await mongoClient.connect();
-    mongoDb = mongoClient.db(process.env.DB_NAME);
-    console.log('Connected to MongoDB');
+    await mongoose.connect(process.env.mongo_url, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('MongoDB connected successfully');
   } catch (err) {
-    console.error('Error connecting to MongoDB', err);
+    console.error('Error connecting to MongoDB:', err.message);
+    process.exit(1); // Exit process with failure
   }
-}
+};
 
-// Initialize MongoDB connection
-connectMongoDB();
+// Load models to create collections
+require('./devs');
+require('./emailVerification');
 
-module.exports = mongoDb;
+module.exports = connectDB;

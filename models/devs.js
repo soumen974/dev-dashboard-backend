@@ -1,15 +1,14 @@
+// models/devs.js
 const mongoose = require('mongoose');
 
-const devSchema = new mongoose.Schema({
-  name: { type: String, required: false },
+const devsSchema = new mongoose.Schema({
+  username: { type: String, required: true },
+  name: { type: String },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  username: { type: String, required: true, unique: true },
-  security_question: { type: String, required: false },
-  security_answer: { type: String, required: false },
+  security_question: { type: String},
+  security_answer: { type: String },
 });
 
-// Ensure that the model is created from the schema
-const devs = mongoose.model('devs', devSchema);
-
-module.exports = devs;
+const Devs = mongoose.model('Devs', devsSchema);
+module.exports = Devs;
