@@ -21,6 +21,7 @@ const authRoutes = require('./routes/authRoutes');
 app.use(cors({
   origin: ['http://localhost:3000', 'https://developerdashboard.vercel.app'],
   credentials: true,
+  methods: ['POST', 'GET', 'DELETE', 'PUT'],
   optionsSuccessStatus: 200
 }));
 
