@@ -17,7 +17,6 @@ require('dotenv').config();
 const executeQuery = require('./utils/executeQuery');
 const authRoutes = require('./routes/authRoutes');
 
-
 app.use(cors({
   origin: ['http://localhost:3000', 'https://developerdashboard.vercel.app'],
   credentials: true,
@@ -25,38 +24,28 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-
-  app.use(cookieParser());
-  app.use(bodyParser.json());
-  app.use(bodyParser.urlencoded({ extended: true }));
-
+app.use(cookieParser());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get('/', (req, res) => {
   res.send('Welcome to Developer dashboard : Backend');
 });
 
 // all routes related to authentication
-
 app.use('/auth', authRoutes);
 app.use('/devs', devRoutes);
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(` Dashboard backend listening at http://localhost:${PORT}`);
-});
-
-
 app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: true,
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Strict'
-    }
-  }));
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'Strict'
+  }
+}));
 
 // Initialize Passport
 app.use(passport.initialize());
@@ -84,7 +73,9 @@ passport.deserializeUser(async (id, done) => {
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: 'http://localhost:5000/auth/google/callback'
+  callbackURL: process.env.NODE_ENV === 'production' 
+    ? 'https://developerdashboard.vercel.app/auth/google/callback' 
+    : 'http://localhost:5000/auth/google/callback'
 },
 async (accessToken, refreshToken, profile, done) => {
   const email = profile.emails[0].value;
@@ -106,7 +97,7 @@ async (accessToken, refreshToken, profile, done) => {
 }));
 
 // Google OAuth Routes
-app.get('   ', passport.authenticate('google', { scope: ['profile', 'email'] }));
+app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: 'http://localhost:3000/' }),
@@ -114,7 +105,7 @@ app.get('/auth/google/callback',
     const token = jwt.sign({ id: req.user.id, email: req.user.email, name: req.user.name }, process.env.SECRET_KEY, { expiresIn: '5d' });
     res.cookie('UserToken', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Strict' });
     res.cookie('userId', req.user.id, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Strict' });
-    res.redirect('http://localhost:3000/');
+    res.redirect(process.env.NODE_ENV === 'production' ? 'https://developerdashboard.vercel.app/' : 'http://localhost:3000/');
   }
 );
 
@@ -127,4 +118,9 @@ app.use((req, res, next) => {
     )));
   };
   next();
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Dashboard backend listening at http://localhost:${PORT}`);
 });
