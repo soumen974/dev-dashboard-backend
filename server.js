@@ -19,10 +19,11 @@ const authRoutes = require('./routes/authRoutes');
 
 
 app.use(cors({
-    origin: 'http://localhost:3000',
-    credentials: true,
-    optionsSuccessStatus: 200
-  }));
+  origin: ['http://localhost:3000', 'https://developerdashboard.vercel.app'],
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
+
 
   app.use(cookieParser());
   app.use(bodyParser.json());
