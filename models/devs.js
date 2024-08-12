@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 
 const devsSchema = new mongoose.Schema({
-  username: { type: String, required: true },
+  username: { type: String, required: true,unique: true },
   name: { type: String },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
@@ -12,3 +12,18 @@ const devsSchema = new mongoose.Schema({
 
 const Devs = mongoose.model('Devs', devsSchema);
 module.exports = Devs;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

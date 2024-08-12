@@ -15,14 +15,14 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Utility function to generate verification code
+
 const generateVerificationCode = async (email) => {
   if (!email) {
     throw new Error('Email cannot be null or undefined');
   }
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit code
-  const expiresAt = new Date(Date.now() + 6 * 60000); // Expiration time: 6 minutes
+  const code = Math.floor(100000 + Math.random() * 900000).toString(); 
+  const expiresAt = new Date(Date.now() + 6 * 60000);
 
   await EmailVerification.findOneAndUpdate(
     { email },
