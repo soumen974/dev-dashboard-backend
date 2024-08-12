@@ -191,8 +191,8 @@ const login = [
         process.env.SECRET_KEY,
         { expiresIn: '5d' }
       );
-
-      res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'Strict' });
+     
+      res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'Strict' });
       return res.status(200).json({ message: 'Developer logged in successfully' });
     } catch (err) {
       res.status(500).json({ error: `Error logging in: ${err.message}` });
