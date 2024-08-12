@@ -22,8 +22,8 @@ const authRoutes = require('./routes/authRoutes');
 app.use(cors({
   origin: [
     'http://localhost:3000', 
-    'https://foxdash.vercel.app/',
-    'https://foxdash.onrender.com/'
+    'https://foxdash.vercel.app',
+    'https://foxdash.onrender.com'
   ],
   credentials: true,
   methods: ['POST', 'GET', 'DELETE', 'PUT'],
