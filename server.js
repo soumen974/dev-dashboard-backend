@@ -44,91 +44,105 @@ app.use('/devs', devRoutes);
 app.use('/portfolio', portfolioRoutes);
 
 
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: true,
-  cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Strict'
-  }
-}));
+app.use(cookieParser());
 
-// Initialize Passport
-app.use(passport.initialize());
-app.use(passport.session());
 
-passport.serializeUser((user, done) => {
-  done(null, user.id);
-});
-
-passport.deserializeUser(async (id, done) => {
-  try {
-    const query = 'SELECT * FROM devs WHERE id = ?';
-    const rows = await executeQuery(query, [id]);
-    if (rows.length > 0) {
-      done(null, rows[0]);
-    } else {
-      done(new Error('User not found'));
-    }
-  } catch (err) {
-    done(err);
-  }
-});
-
-// Configure Google OAuth strategy
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.NODE_ENV === 'production' 
-    ? 'https://developerdashboard.vercel.app/auth/google/callback' 
-    : 'http://localhost:5000/auth/google/callback'
-},
-async (accessToken, refreshToken, profile, done) => {
-  const email = profile.emails[0].value;
-  try {
-    const query = 'SELECT * FROM devs WHERE email = ?';
-    const rows = await executeQuery(query, [email]);
-    if (rows.length > 0) {
-      done(null, rows[0]);
-    } else {
-      const insertUserQuery = 'INSERT INTO devs (username, email, name) VALUES (?, ?, ?)';
-      const result = await executeQuery(insertUserQuery, [profile.displayName, email, profile.name.givenName]);
-      const newUserQuery = 'SELECT * FROM devs WHERE id = ?';
-      const newUser = await executeQuery(newUserQuery, [result.insertId]);
-      done(null, newUser[0]);
-    }
-  } catch (err) {
-    done(err);
-  }
-}));
-
-// Google OAuth Routes
-app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-
-app.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: 'http://localhost:3000/' }),
-  (req, res) => {
-    const token = jwt.sign({ id: req.user.id, email: req.user.email, name: req.user.name }, process.env.SECRET_KEY, { expiresIn: '5d' });
-    res.cookie('UserToken', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Strict' });
-    res.cookie('userId', req.user.id, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Strict' });
-    res.redirect(process.env.NODE_ENV === 'production' ? 'https://developerdashboard.vercel.app/' : 'http://localhost:3000/');
-  }
-);
-
-// Response middleware for handling bigint in JSON
-app.use((req, res, next) => {
-  const originalJson = res.json;
-  res.json = function (data) {
-    return originalJson.call(this, JSON.parse(JSON.stringify(data, (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    )));
-  };
-  next();
-});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Dashboard backend listening at http://localhost:${PORT}`);
 });
+
+
+
+
+
+// Import necessary modules
+// const passport = require('passport');
+// const GoogleStrategy = require('passport-google-oauth20').Strategy;
+// const jwt = require('jsonwebtoken');
+const Dev = require('./models/devs');  // Your Dev model for MongoDB using Mongoose
+
+
+
+// Configure session middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET,  // Use a secret key for session encryption
+  resave: false,  // Don't save the session if it wasn't modified
+  saveUninitialized: false,  // Don't create a session unless something is stored
+  cookie: {
+    httpOnly: true,  // Prevent client-side JavaScript from accessing the cookie
+    secure: process.env.NODE_ENV === 'production',  // Use secure cookies in production
+    sameSite: 'Strict',  // Mitigate CSRF attacks by limiting the cookie's scope
+  }
+}));
+
+// Initialize Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Configure Passport for Google OAuth
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: 'http://localhost:5000/auth/google/callback'
+},
+async (accessToken, refreshToken, profile, done) => {
+  const email = profile.emails[0].value;
+
+  try {
+    let dev = await Dev.findOne({ email });
+
+    if (dev) {
+      // If the user exists, proceed with authentication
+      return done(null, dev);
+    } else {
+      // Redirect to registration if the user does not exist
+      return done(null, false, { message: 'User not found, redirect to registration' });
+    }
+  } catch (err) {
+    return done(err);
+  }
+}));
+
+
+// Serialize and deserialize user sessions
+passport.serializeUser((dev, done) => {
+  done(null, dev.id);  // Only store the user ID in the session
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const dev = await Dev.findById(id);  // Find user by ID
+    done(null, dev);
+  } catch (err) {
+    done(err);
+  }
+});
+
+// Google OAuth login route (Redirect to Google login)
+const googleLogin = passport.authenticate('google', { scope: ['profile', 'email'] });
+
+// Google OAuth callback route
+const googleCallback = [
+  passport.authenticate('google', { failureRedirect: 'https://foxdash.vercel.app/auth/registerr' }),
+  (req, res) => {
+    if (!req.user) {
+      // If the user was not found, redirect to the registration page
+      return res.redirect('https://foxdash.vercel.app/auth/register');
+    }
+
+    // Issue JWT token if user exists
+    const token = jwt.sign({ id: req.user._id, email: req.user.email, username: req.user.username }, process.env.SECRET_KEY, { expiresIn: '5d' });
+    
+    res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' });
+    res.redirect('https://foxdash.vercel.app/dashboard');
+  }
+
+];
+
+
+
+// Routes for Google OAuth
+app.get('/auth/google', googleLogin);
+app.get('/auth/google/callback', googleCallback);
