@@ -3,7 +3,10 @@ require('dotenv').config();
 
 
 function authenticateToken(req, res, next) {
-  const token = req.cookies.token; // Ensure this matches your token name
+  const token = req.cookies.token; 
+  const accessToken = req.cookies.accessToken;
+  const refreshToken = req.cookies.refreshToken;
+ 
 
   if (!token) {
     // res.redirect('http://localhost:3000/');
