@@ -10,6 +10,9 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const devRoutes = require('./routes/devRoutes');
 const portfolioRoutes = require('./routes/portfolioRoutes');
+const ensureAuthenticated=require('./middlewares/authenticateToken');
+
+const { google } = require('googleapis');
 
 const connectDB = require('./models/db');
 connectDB();
@@ -57,23 +60,22 @@ app.listen(PORT, () => {
 
 
 
-// Import necessary modules
-// const passport = require('passport');
-// const GoogleStrategy = require('passport-google-oauth20').Strategy;
-// const jwt = require('jsonwebtoken');
-const Dev = require('./models/devs');  // Your Dev model for MongoDB using Mongoose
+
+const Dev = require('./models/devs'); 
+const  Reminder= require('./models/reminderSchema');
+
 
 
 
 // Configure session middleware
 app.use(session({
-  secret: process.env.SESSION_SECRET,  // Use a secret key for session encryption
-  resave: false,  // Don't save the session if it wasn't modified
-  saveUninitialized: false,  // Don't create a session unless something is stored
+  secret: process.env.SESSION_SECRET, 
+  resave: false, 
+  saveUninitialized: false, 
   cookie: {
-    httpOnly: true,  // Prevent client-side JavaScript from accessing the cookie
-    secure: process.env.NODE_ENV === 'production',  // Use secure cookies in production
-    sameSite: 'Strict',  // Mitigate CSRF attacks by limiting the cookie's scope
+    httpOnly: true, 
+    secure: process.env.NODE_ENV === 'production', 
+    sameSite: 'Strict', 
   }
 }));
 
@@ -95,6 +97,8 @@ async (accessToken, refreshToken, profile, done) => {
 
     if (dev) {
       // If the user exists, proceed with authentication
+      // res.cookie('accessToken', accessToken, { httpOnly: true, secure: true, sameSite: 'None' });
+      // res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true, sameSite: 'None' });
       return done(null, dev);
     } else {
       // Redirect to registration if the user does not exist
@@ -125,11 +129,11 @@ const googleLogin = passport.authenticate('google', { scope: ['profile', 'email'
 
 // Google OAuth callback route
 const googleCallback = [
-  passport.authenticate('google', { failureRedirect: 'https://foxdash.vercel.app/auth/registerr' }),
+  passport.authenticate('google', { failureRedirect: 'https://foxdash.vercel.app/' }),
   (req, res) => {
     if (!req.user) {
       // If the user was not found, redirect to the registration page
-      return res.redirect('https://foxdash.vercel.app/auth/register');
+      return res.redirect('https://foxdash.vercel.app/');
     }
 
     // Issue JWT token if user exists
@@ -146,3 +150,56 @@ const googleCallback = [
 // Routes for Google OAuth
 app.get('/auth/google', googleLogin);
 app.get('/auth/google/callback', googleCallback);
+
+
+
+// --------------------
+
+// Reminder route
+// app.post('/api/addReminder', ensureAuthenticated, async (req, res) => {
+//   const { reminderData } = req.body;
+//   const accessToken = req.cookies.accessToken;
+//   const refreshToken = req.cookies.refreshToken;
+
+//   // const user = await Dev.findById(req.devs.id);
+
+//   // const dev = 
+  
+//   const user = await Dev.findById(req.devs.id);
+
+//   if (accessToken) {
+//     return res.status(401).send('Google access token not found. Please authenticate.');
+//   }
+
+//   const auth = new google.auth.OAuth2();
+//   auth.setCredentials({ access_token: accessToken });
+
+//   const event = {
+//     summary: reminderData.title,
+//     description: reminderData.description,
+//     start: { dateTime: reminderData.time, timeZone: 'UTC' },
+//     end: { dateTime: reminderData.time, timeZone: 'UTC' },
+//   };
+
+//   try {
+//     const calendar = google.calendar({ version: 'v3', auth });
+//     const calendarResponse = await calendar.events.insert({
+//       calendarId: 'primary',
+//       resource: event,
+//     });
+
+//     const newReminder = new Reminder({
+//       userId: req.devs.id,
+//       title: reminderData.title,
+//       description: reminderData.description,
+//       time: reminderData.time,
+//       googleEventId: calendarResponse.data.id,
+//     });
+
+//     await newReminder.save();
+//     res.status(200).send('Reminder added successfully');
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).send('Error adding reminder');
+//   }
+// });
