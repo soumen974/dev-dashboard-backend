@@ -137,12 +137,22 @@ const addPassword = [
       });
 
       await dev.save();
-      res.status(201).json({ message: 'Developer added successfully' });
+
+      const token = jwt.sign(
+        { id: dev._id, email: dev.email, username: dev.username },
+        process.env.SECRET_KEY,
+        { expiresIn: '5d' }
+      );
+
+      res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' });
+
+      return res.status(201).json({ message: 'Developer added successfully', token });
     } catch (err) {
       res.status(500).json({ error: `Error adding developer: ${err.message}` });
     }
   }
 ];
+
 
 // Check username availability controller
 const checkUsername = [
@@ -168,30 +178,34 @@ const checkUsername = [
   }
 ];
 
-// Login controller
 const login = [
-  body('email').isEmail(),
-  body('password').isLength({ min: 5 }),
+  body('email').isEmail().withMessage('Enter a valid email address'),
+  body('password').isLength({ min: 5 }).withMessage('Password must be at least 5 characters long'),
   async (req, res) => {
     const { email, password } = req.body;
 
     try {
       const dev = await Dev.findOne({ email });
+
+      // Check if the email exists
       if (!dev) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+        return res.status(404).json({ error: 'User not found' }); // Specific message for non-existent email
       }
 
+      // Check if the password is correct
       const match = await bcrypt.compare(password, dev.password);
       if (!match) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+        return res.status(401).json({ error: 'Wrong Password !' }); // Unified error message for wrong password
       }
 
+      // Generate the JWT token
       const token = jwt.sign(
         { id: dev._id, email: dev.email, username: dev.username },
         process.env.SECRET_KEY,
         { expiresIn: '5d' }
       );
-     
+
+      // Set token as an HttpOnly cookie
       res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' });
       return res.status(200).json({ message: 'Developer logged in successfully' });
     } catch (err) {
@@ -199,6 +213,8 @@ const login = [
     }
   }
 ];
+
+
 
 // Logout controller
 const logout = (req, res) => {
