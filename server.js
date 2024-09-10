@@ -87,7 +87,7 @@ app.use(passport.session());
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: 'https://foxdashapi.onrender.com/auth/google/callback'
+  callbackURL: `${process.env.BACKEND_API}/auth/google/callback`
 },
 async (accessToken, refreshToken, profile, done) => {
   const email = profile.emails[0].value;
@@ -129,18 +129,18 @@ const googleLogin = passport.authenticate('google', { scope: ['profile', 'email'
 
 // Google OAuth callback route
 const googleCallback = [
-  passport.authenticate('google', { failureRedirect: 'https://foxdash.vercel.app/' }),
+  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND}` }),
   (req, res) => {
     if (!req.user) {
       // If the user was not found, redirect to the registration page
-      return res.redirect('https://foxdash.vercel.app/');
+      return res.redirect(`${process.env.FRONTEND}`);
     }
 
     // Issue JWT token if user exists
     const token = jwt.sign({ id: req.user._id, email: req.user.email, username: req.user.username }, process.env.SECRET_KEY, { expiresIn: '5d' });
     
     res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' });
-    res.redirect('https://foxdash.vercel.app/dashboard');
+    res.redirect(`${process.env.FRONTEND}/dashboard`);
   }
 
 ];
