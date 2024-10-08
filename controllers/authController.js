@@ -75,6 +75,11 @@ const register = [
       await sendVerificationEmail(email, verificationCode);
 
       res.status(201).json({ message: `Verification code sent to ${email}` });
+
+        setTimeout(() => {
+          EmailVerification.deleteOne({ email });
+      }, 360000);
+      
     } catch (err) {
       res.status(500).send(`Error processing request: ${err.message}`);
     }
@@ -96,7 +101,9 @@ const verifyEmail = [
     try {
       const verification = await EmailVerification.findOne({ email, code });
       if (!verification || verification.expiresAt < Date.now()) {
+        await EmailVerification.deleteOne({ email });
         return res.status(400).json({ error: 'Invalid or expired verification code' });
+
       }
 
       await EmailVerification.deleteOne({ email });
@@ -205,8 +212,8 @@ const login = [
         { expiresIn: '5d' }
       );
 
-      // Set token as an HttpOnly cookie
-      res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' });
+      res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'None' });
+      // secure true
       return res.status(200).json({ message: 'Developer logged in successfully' });
     } catch (err) {
       res.status(500).json({ error: `Error logging in: ${err.message}` });

@@ -4,12 +4,11 @@ require('dotenv').config();
 
 function authenticateToken(req, res, next) {
   const token = req.cookies.token; 
-  const accessToken = req.cookies.accessToken;
-  const refreshToken = req.cookies.refreshToken;
+  // const accessToken = req.cookies.accessToken;
+  // const refreshToken = req.cookies.refreshToken;
  
 
   if (!token) {
-    // res.redirect('http://localhost:3000/');
     return res.status(403).json({ error: 'Token required' });
   }
 
