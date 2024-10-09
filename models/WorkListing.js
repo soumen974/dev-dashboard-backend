@@ -25,7 +25,7 @@ const WorkListingSchema = new mongoose.Schema({
         type: Boolean, 
         default: false 
     }
-});
+},{ timestamps: true });
 
 const WorkListing = mongoose.model('WorkListing', WorkListingSchema);
 module.exports = WorkListing;

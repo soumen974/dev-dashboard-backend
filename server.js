@@ -12,6 +12,8 @@ const devRoutes = require('./routes/devRoutes');
 const portfolioRoutes = require('./routes/portfolioRoutes');
 const ensureAuthenticated=require('./middlewares/authenticateToken');
 const workRoutes=require('./routes/WorkListingRoutes');
+const Track=require('./routes/TrackRoutes');
+
 
 const { google } = require('googleapis');
 
@@ -47,6 +49,7 @@ app.use('/auth', authRoutes);
 app.use('/devs', devRoutes);
 app.use('/portfolio', portfolioRoutes);
 app.use('/work',workRoutes);
+app.use('/dev',Track);
 
 
 app.use(cookieParser());

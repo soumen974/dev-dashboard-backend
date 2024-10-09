@@ -6,8 +6,8 @@ const devsSchema = new mongoose.Schema({
   name: { type: String },
   email: { type: String, required: true, unique: true },
   password: { type: String},
-  security_question: { type: String},
-  security_answer: { type: String },
+  security_question: { type: String,sparse: true},
+  security_answer: { type: String,sparse: true },
 });
 
 const Devs = mongoose.model('Devs', devsSchema);
