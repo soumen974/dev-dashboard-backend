@@ -7,11 +7,24 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Multer setup for Cloudinary storage
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
-    folder: 'uploads',
-    allowedFormats: ['jpg', 'jpeg', 'png'],
+  params: (req, file) => {
+    if (file.mimetype.startsWith('image/')) {
+      return {
+        folder: 'images',
+        resource_type: 'image',
+      };
+    } else if (file.mimetype === 'application/pdf') {
+      return {
+        folder: 'resumes',
+        resource_type: 'raw',
+      };
+    } else {
+      // Optional fallback for unsupported file types
+      throw new Error('Unsupported file type');
+    }
   },
 });
 

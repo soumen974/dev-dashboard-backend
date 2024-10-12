@@ -3,10 +3,8 @@ const PersonalData = require('../models/personalData');
 // Create personal data for a user
 const createPersonalData = async (req, res) => {
     try {
-        const { name,imageUrl, email, phone, headline, description, about } = req.body;
-
-        const username=req.devs.username;
-        
+        const { name, email, phone, headline, description, about } = req.body;
+        const username = req.devs.username;
 
         // Check if personal data already exists for the user
         const existingData = await PersonalData.findOne({ username });
@@ -14,20 +12,22 @@ const createPersonalData = async (req, res) => {
             return res.status(400).json({ message: 'Personal data already exists for this user' });
         }
 
-        if (!req.file) {
-            return res.status(400).json({ message: 'No image uploaded' });
+        // Check if both image and PDF are uploaded
+        if (!req.files || (!req.files.imageUrl && !req.files.resumeUrl)) {
+            return res.status(400).json({ message: 'Image and/or PDF not uploaded' });
         }
 
         // Create new personal data
         const newPersonalData = new PersonalData({
             username,
             name,
-            imageUrl: req.file.path,   
+            imageUrl: req.files.imageUrl ? req.files.imageUrl[0].path : "",   
             email,
             phone,
             headline,
             description,
-            about
+            about,
+            resumeUrl: req.files.resumeUrl ? req.files.resumeUrl[0].path : ""
         });
 
         // Save the new personal data
@@ -37,6 +37,7 @@ const createPersonalData = async (req, res) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
+
 
 const getPersonalData = async (req, res) => {
     try {
@@ -58,17 +59,27 @@ const getPersonalData = async (req, res) => {
 // Update personal data for a user
 const updatePersonalData = async (req, res) => {
     try {
-        const  username  = req.devs.username;
-        const { name,imageUrl, email, phone, headline, description, about } = req.body;
+        const username = req.devs.username;
+        const { name, email, phone, headline, description, about } = req.body;
 
-        if (!req.file) {
-            return res.status(400).json({ message: 'No image uploaded' });
+        // Check if files are uploaded (image and/or PDF)
+        if (!req.files || (!req.files.imageUrl && !req.files.resumeUrl)) {
+            return res.status(400).json({ message: 'Image and/or PDF not uploaded' });
         }
 
         // Find and update personal data by username
         const updatedPersonalData = await PersonalData.findOneAndUpdate(
             { username },
-            { name,imageUrl:req.file.path, email, phone, headline, description, about },
+            {
+                name,
+                imageUrl: req.files.imageUrl ? req.files.imageUrl[0].path : "",
+                email,
+                phone,
+                headline,
+                description,
+                about,
+                resumeUrl: req.files.resumeUrl ? req.files.resumeUrl[0].path : ""
+            },
             { new: true, runValidators: true }
         );
 
@@ -81,6 +92,7 @@ const updatePersonalData = async (req, res) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
+
 
 const deletePersonalData = async (req, res) => {
     try {

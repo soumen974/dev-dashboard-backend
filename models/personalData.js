@@ -12,6 +12,7 @@ const personal_dataSchema = new mongoose.Schema({
         headline: { type: String },
         description: { type: String },
         about: { type: String },
+        resumeUrl: { type: String },
 }, { timestamps: true });
 
 const personal_data = mongoose.model('personal_data', personal_dataSchema);

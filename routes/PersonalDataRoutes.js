@@ -15,13 +15,13 @@ const router = express.Router();
 const upload = multer({ storage });
 
 // Create personal data
-router.post('/personal_data',authenticateToken,upload.single('image'), createPersonalData);
+router.post('/personal_data',authenticateToken,upload.fields([{ name: 'imageUrl' }, { name: 'resumeUrl' }]), createPersonalData);
 
 // Get personal data by username
 router.get('/personal_data',authenticateToken, getPersonalData);
 
 // Update personal data by username
-router.put('/personal_data',authenticateToken,upload.single('image'), updatePersonalData);
+router.put('/personal_data',authenticateToken,upload.fields([{ name: 'imageUrl' }, { name: 'resumeUrl' }]), updatePersonalData);
 
 // Delete personal data by username
 router.delete('/personal_data',authenticateToken, deletePersonalData);
