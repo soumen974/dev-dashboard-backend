@@ -9,6 +9,7 @@ const portfolioSchema = new mongoose.Schema({
 
   personal_data: {
     name: { type: String },
+    imageUrl: { type: String },
     email: { type: String },
     phone: { type: String },
     github_link: { type: String },
@@ -21,7 +22,14 @@ const portfolioSchema = new mongoose.Schema({
     description: { type: String },
     about: { type: String },
   },
-  education: [{institute:{type:String},degree:{type:String},time:{type:String},marks:{type:String}}],
+  education: [
+    {institute:{type:String},
+    degree:{type:String},
+    roll_no:{type:String,spare:true},
+    time:{type:String},
+    marks:{type:String},
+    isCurrent:{type:Boolean}
+  }],
   recent_experience: {
     position: { type: String },
     company: { type: String },

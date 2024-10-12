@@ -13,6 +13,8 @@ const portfolioRoutes = require('./routes/portfolioRoutes');
 const ensureAuthenticated=require('./middlewares/authenticateToken');
 const workRoutes=require('./routes/WorkListingRoutes');
 const Track=require('./routes/TrackRoutes');
+const PersonalData=require('./routes/PersonalDataRoutes');
+const educationData=require('./routes/educationDataRoutes');
 
 
 const { google } = require('googleapis');
@@ -50,7 +52,8 @@ app.use('/devs', devRoutes);
 app.use('/portfolio', portfolioRoutes);
 app.use('/work',workRoutes);
 app.use('/dev',Track);
-
+app.use('/dev/data',PersonalData);
+app.use('/dev',educationData);
 
 app.use(cookieParser());
 

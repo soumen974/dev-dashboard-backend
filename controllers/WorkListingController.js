@@ -34,7 +34,6 @@ const createWorkListing = async (req, res) => {
   }
 };
 
-// Get all WorkListings for the authenticated user
 const getAllWorkListings = async (req, res) => {
   try {
     const username = req.devs.username;
@@ -48,7 +47,6 @@ const getAllWorkListings = async (req, res) => {
   }
 };
 
-// Get a specific WorkListing by ID
 const getWorkListingById = async (req, res) => {
     try {
       const { id } = req.params;
@@ -72,19 +70,16 @@ const getWorkListingById = async (req, res) => {
       const { task_name, task_description, completion_time, completed } = req.body;
       const username = req.devs.username;
   
-      // Find the work listing by _id and username to ensure it's owned by the user
       const workListing = await WorkListing.findOne({ _id: id, username });
       if (!workListing) {
         return res.status(404).json({ message: 'Work listing not found or not owned by this user' });
       }
   
-      // Update the fields, only if they are provided
       workListing.task_name = task_name || workListing.task_name;
       workListing.task_description = task_description || workListing.task_description;
       workListing.completion_time = completion_time || workListing.completion_time;
       workListing.completed = typeof completed === 'boolean' ? completed : workListing.completed;
   
-      // Save the updated work listing
       await workListing.save();
   
       res.status(200).json({ message: 'Work listing updated successfully', workListing });
@@ -94,7 +89,6 @@ const getWorkListingById = async (req, res) => {
   };
   
   
-
 // Delete a specific WorkListing
 const deleteWorkListing = async (req, res) => {
   try {

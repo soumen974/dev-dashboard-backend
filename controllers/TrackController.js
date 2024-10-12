@@ -1,12 +1,10 @@
 const Track = require('../models/track');
 
-// Create or update track information
 const createOrUpdateTrack = async (req, res) => {
   try {
-    const username = req.devs.username; // Get the username from the authenticated user
+    const username = req.devs.username; 
     const { github_id, github_token, codeforces_id, codeforces_token, codechef_id, codechef_token, hackerrank_id, hackerrank_token, leetcode_id, leetcode_token } = req.body;
 
-    // Check if a record for the user already exists
     const trackData = await Track.findOneAndUpdate(
       { username },
       {
@@ -29,7 +27,6 @@ const createOrUpdateTrack = async (req, res) => {
   }
 };
 
-// Get track information for a user
 const getTrackInfo = async (req, res) => {
   try {
     const username = req.devs.username;
@@ -45,7 +42,7 @@ const getTrackInfo = async (req, res) => {
   }
 };
 
-// Delete track information for a user
+
 const deleteTrackInfo = async (req, res) => {
   try {
     const username = req.devs.username;
