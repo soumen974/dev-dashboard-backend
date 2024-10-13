@@ -7,6 +7,14 @@ const createExperience = async (req, res) => {
       ...req.body,
       username: req.devs.username 
     });
+
+    if (req.files && req.files.companyLogoUrl) {
+      newExperience.companyLogoUrl = req.files.companyLogoUrl[0].path;
+  }
+
+  if (req.files && req.files.relatedPDFUrl) {
+    newExperience.relatedPDFUrl = req.files.relatedPDFUrl[0].path;
+  }
     await newExperience.save();
     res.status(201).json(newExperience);
   } catch (err) {
@@ -53,10 +61,18 @@ const updateExperience = async (req, res) => {
       // Update only the fields that are provided in the request body
       if (position) experience.position = position;
       if (companyName) experience.companyName = companyName;
-      if (companyLogoUrl) experience.companyLogoUrl = companyLogoUrl;
-      if (relatedPDFUrl) experience.relatedPDFUrl = relatedPDFUrl;
       if (location) experience.location = location;
+      
       if (time) experience.time = time;
+
+      if (req.files && req.files.companyLogoUrl) {
+        experience.companyLogoUrl = req.files.companyLogoUrl[0].path;
+    }
+  
+    if (req.files && req.files.relatedPDFUrl) {
+      experience.relatedPDFUrl = req.files.relatedPDFUrl[0].path;
+    }
+      
 
       // Update learnings if provided
       if (learnings && Array.isArray(learnings)) {
@@ -68,7 +84,6 @@ const updateExperience = async (req, res) => {
           experience.skills = skills.map(skill => ({ name: skill.name }));
       }
 
-      // Save the updated experience
       const updatedExperience = await experience.save();
       res.status(200).json(updatedExperience);
   } catch (error) {

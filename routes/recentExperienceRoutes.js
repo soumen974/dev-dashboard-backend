@@ -12,9 +12,13 @@ const {
   removeSkill
 } = require('../controllers/recentExperienceController');
 const authenticateToken = require('../middlewares/authenticateToken'); 
+const multer = require('multer');
+const { storage } = require('../services/cloudinary');
+const upload = multer({ storage });
+
 
 // Create a new recent experience
-router.post('/', authenticateToken, createExperience);
+router.post('/', authenticateToken,upload.fields([{ name: 'companyLogoUrl' }, { name: 'relatedPDFUrl' }]), createExperience);
 
 // Get all recent experiences for the authenticated user
 router.get('/', authenticateToken, getAllExperiences);
@@ -23,12 +27,13 @@ router.get('/', authenticateToken, getAllExperiences);
 router.get('/:id', authenticateToken, getExperienceById);
 
 // Update an experience by ID
-router.put('/:id', authenticateToken, updateExperience);
+router.put('/:id', authenticateToken,upload.fields([{ name: 'companyLogoUrl' }, { name: 'relatedPDFUrl' }]), updateExperience);
 
 // Delete an experience by ID
 router.delete('/:id', authenticateToken, deleteExperience);
 
 // Add a new learning to a specific experience by ID
+
 router.post('/:id/learnings', authenticateToken, addLearning);
 
 // Add a new skill to a specific experience by ID

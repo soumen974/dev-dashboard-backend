@@ -7,10 +7,11 @@ const {
 const authenticateToken = require('../middlewares/authenticateToken');
 const multer = require('multer');
 const { storage } = require('../services/cloudinary');
+const upload = multer({ storage });
+
 
 const router = express.Router();
 
-const upload = multer({ storage });
 
 
 router.post('/personal_data',authenticateToken,upload.fields([{ name: 'imageUrl' }, { name: 'resumeUrl' }]), createOrUpdatePersonalData);
