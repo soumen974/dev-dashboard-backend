@@ -15,6 +15,7 @@ const workRoutes=require('./routes/WorkListingRoutes');
 const Track=require('./routes/TrackRoutes');
 const PersonalData=require('./routes/PersonalDataRoutes');
 const educationData=require('./routes/educationDataRoutes');
+const recentExperience = require('./routes/recentExperienceRoutes');
 
 
 const { google } = require('googleapis');
@@ -54,6 +55,7 @@ app.use('/work',workRoutes);
 app.use('/dev',Track);
 app.use('/dev/data',PersonalData);
 app.use('/dev',educationData);
+app.use('/dev',recentExperience);
 
 app.use(cookieParser());
 

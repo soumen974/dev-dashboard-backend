@@ -32,10 +32,13 @@ const portfolioSchema = new mongoose.Schema({
   }],
   recent_experience: {
     position: { type: String },
-    company: { type: String },
+    company_name: { type: String },
+    CompanyLogoUrl: { type: String },
+    RelatedPDFUrl: { type: String },
+    location: { type: String },
     time: { type: String },
-    learning:[{name:{type:String}}],
-    mode: { type: String }
+    learnings:[{name:{type:String}}],
+    skills: [{ name: { type: String } }]
 
   },
   projects: [
