@@ -132,7 +132,7 @@ const addSkill = async (req, res) => {
       return res.status(404).json({ message: 'Experience not found' });
     }
 
-    experience.skills.push(req.body);  // Add new skill
+    experience.skills.push(req.body);  
     await experience.save();
     res.status(200).json(experience);
   } catch (err) {

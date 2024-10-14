@@ -16,7 +16,7 @@ const Track=require('./routes/TrackRoutes');
 const PersonalData=require('./routes/PersonalDataRoutes');
 const educationData=require('./routes/educationDataRoutes');
 const recentExperience = require('./routes/recentExperienceRoutes');
-
+const project=require('./routes/projectRoutes');
 
 const { google } = require('googleapis');
 
@@ -56,6 +56,7 @@ app.use('/dev',Track);
 app.use('/dev/data',PersonalData);
 app.use('/dev',educationData);
 app.use('/dev',recentExperience);
+app.use('/devs',project);
 
 app.use(cookieParser());
 
