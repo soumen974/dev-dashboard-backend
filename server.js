@@ -11,6 +11,13 @@ const bcrypt = require('bcrypt');
 const devRoutes = require('./routes/devRoutes');
 const portfolioRoutes = require('./routes/portfolioRoutes');
 const ensureAuthenticated=require('./middlewares/authenticateToken');
+const workRoutes=require('./routes/WorkListingRoutes');
+const Track=require('./routes/TrackRoutes');
+const PersonalData=require('./routes/PersonalDataRoutes');
+const educationData=require('./routes/educationDataRoutes');
+const recentExperience = require('./routes/recentExperienceRoutes');
+const project=require('./routes/projectRoutes');
+const resumeMaker=require('./routes/resumePdfMakeRoutes');
 
 const { google } = require('googleapis');
 
@@ -45,7 +52,13 @@ app.get('/', (req, res) => {
 app.use('/auth', authRoutes);
 app.use('/devs', devRoutes);
 app.use('/portfolio', portfolioRoutes);
-
+app.use('/work',workRoutes);
+app.use('/dev',Track);
+app.use('/dev/data',PersonalData);
+app.use('/dev',educationData);
+app.use('/dev',recentExperience);
+app.use('/devs',project);
+app.use('/build',resumeMaker);
 
 app.use(cookieParser());
 
@@ -79,17 +92,14 @@ app.use(session({
   }
 }));
 
-// Initialize Passport middleware
-app.use(passport.initialize());
-app.use(passport.session());
-
 // Configure Passport for Google OAuth
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: `${process.env.BACKEND_API}/auth/google/callback`
+  callbackURL: `${process.env.BACKEND_API}/auth/google/callback`,
+  passReqToCallback: true // Allow access to req and res
 },
-async (accessToken, refreshToken, profile, done) => {
+async (req, accessToken, refreshToken, profile, done) => {
   const email = profile.emails[0].value;
 
   try {
@@ -97,43 +107,29 @@ async (accessToken, refreshToken, profile, done) => {
 
     if (dev) {
       // If the user exists, proceed with authentication
-      // res.cookie('accessToken', accessToken, { httpOnly: true, secure: true, sameSite: 'None' });
-      // res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true, sameSite: 'None' });
       return done(null, dev);
     } else {
-      // Redirect to registration if the user does not exist
-      return done(null, false, { message: 'User not found, redirect to registration' });
+      // If the user doesn't exist, redirect to registration
+      // Pass the email to the frontend for registration
+      return done(null, false, { email }); 
     }
   } catch (err) {
     return done(err);
   }
 }));
 
-
-// Serialize and deserialize user sessions
-passport.serializeUser((dev, done) => {
-  done(null, dev.id);  // Only store the user ID in the session
-});
-
-passport.deserializeUser(async (id, done) => {
-  try {
-    const dev = await Dev.findById(id);  // Find user by ID
-    done(null, dev);
-  } catch (err) {
-    done(err);
-  }
-});
-
 // Google OAuth login route (Redirect to Google login)
 const googleLogin = passport.authenticate('google', { scope: ['profile', 'email'] });
 
+
 // Google OAuth callback route
 const googleCallback = [
-  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND}` }),
+  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND}/auth/register` }),
   (req, res) => {
     if (!req.user) {
-      // If the user was not found, redirect to the registration page
-      return res.redirect(`${process.env.FRONTEND}`);
+      // If the user was not found, redirect to the registration page with email query
+      const email = req.authInfo?.email;  // Retrieve the email passed from the Google strategy
+      return res.redirect(`${process.env.FRONTEND}/auth/register?email=${email}`);
     }
 
     // Issue JWT token if user exists
@@ -142,15 +138,11 @@ const googleCallback = [
     res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' });
     res.redirect(`${process.env.FRONTEND}/dashboard`);
   }
-
 ];
-
-
 
 // Routes for Google OAuth
 app.get('/auth/google', googleLogin);
 app.get('/auth/google/callback', googleCallback);
-
 
 
 // --------------------
