@@ -212,7 +212,7 @@ const login = [
         { expiresIn: '5d' }
       );
 
-      res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'None' });
+      res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' });
       // secure true
       return res.status(200).json({ message: 'Developer logged in successfully' });
     } catch (err) {
