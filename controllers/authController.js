@@ -151,7 +151,7 @@ const addPassword = [
         { expiresIn: '5d' }
       );
 
-      res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' });
+      res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'None' });
 
       return res.status(201).json({ message: 'Developer added successfully', token });
     } catch (err) {
@@ -212,7 +212,7 @@ const login = [
         { expiresIn: '5d' }
       );
 
-      res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' });
+      res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'None' });
       // secure true
       return res.status(200).json({ message: 'Developer logged in successfully' });
     } catch (err) {

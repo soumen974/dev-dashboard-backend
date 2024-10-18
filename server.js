@@ -7,16 +7,17 @@ const passport = require('passport');
 const session = require('express-session');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
 const devRoutes = require('./routes/devRoutes');
 const portfolioRoutes = require('./routes/portfolioRoutes');
-const ensureAuthenticated=require('./middlewares/authenticateToken');
 const workRoutes=require('./routes/WorkListingRoutes');
 const Track=require('./routes/TrackRoutes');
 const PersonalData=require('./routes/PersonalDataRoutes');
 const educationData=require('./routes/educationDataRoutes');
 const recentExperience = require('./routes/recentExperienceRoutes');
 const project=require('./routes/projectRoutes');
+const socials=require('./routes/socialRoutes');
+const service=require('./routes/serviceRoutes');
+
 const resumeMaker=require('./routes/resumePdfMakeRoutes');
 
 const { google } = require('googleapis');
@@ -45,7 +46,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get('/', (req, res) => {
-  res.send('Welcome to Developer dashboard : Backend');
+  res.send(`Welcome to Developer dashboard : Backend `);
 });
 
 // all routes related to authentication
@@ -59,6 +60,8 @@ app.use('/dev',educationData);
 app.use('/dev',recentExperience);
 app.use('/devs',project);
 app.use('/build',resumeMaker);
+app.use('/devs',socials);
+app.use('/devs',service);
 
 app.use(cookieParser());
 
@@ -88,7 +91,7 @@ app.use(session({
   cookie: {
     httpOnly: true, 
     secure: process.env.NODE_ENV === 'production', 
-    sameSite: 'Strict', 
+    sameSite: 'none', 
   }
 }));
 
@@ -135,7 +138,7 @@ const googleCallback = [
     // Issue JWT token if user exists
     const token = jwt.sign({ id: req.user._id, email: req.user.email, username: req.user.username }, process.env.SECRET_KEY, { expiresIn: '5d' });
     
-    res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' });
+    res.cookie('token', token, { httpOnly: true,secure: process.env.NODE_ENV === 'production', sameSite: 'None' });
     res.redirect(`${process.env.FRONTEND}/dashboard`);
   }
 ];
