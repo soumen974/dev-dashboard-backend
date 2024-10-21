@@ -5,10 +5,10 @@ const licennceCertificationSchema = new mongoose.Schema({
         type: String, 
         required: true
     },
-    certificatePdf: { type: String },
+    certificatePdfUrl: { type: String },
     company_name: { type: String },
-    company_name_logo: { type: String },
-    Certification_title: { type: String },
+    company_name_logoUrl: { type: String },
+    certification_title: { type: String },
     time: { type: String },
     skills: [
       { name: { type: String } }

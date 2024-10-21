@@ -33,9 +33,9 @@ const updateService = async (req, res) => {
         if(!Service) return res.status(404).send('No service found');
 
         if(title) Service.title = title;
-        if(description) service.description = description;
+        if(description) Service.description = description;
 
-        const updatedService = await service.save();
+        const updatedService = await Service.save();
         res.status(200).json(updatedService);
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -44,12 +44,12 @@ const updateService = async (req, res) => {
 
 const deleteService = async (req, res) => {
     try {
-        const service = await service.findOneAndDelete({
+        const Service = await service.findOneAndDelete({
             _id: req.params.id, 
             username: req.devs.username 
         });
 
-        if(!service) return res.status(404).send('No service found');
+        if(!Service) return res.status(404).send('No service found');
 
 
         res.status(200).json({ message: 'Service deleted successfully' });

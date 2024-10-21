@@ -17,6 +17,7 @@ const recentExperience = require('./routes/recentExperienceRoutes');
 const project=require('./routes/projectRoutes');
 const socials=require('./routes/socialRoutes');
 const service=require('./routes/serviceRoutes');
+const licenceCerification =require('./routes/licenceCertificationRoutes');
 
 const resumeMaker=require('./routes/resumePdfMakeRoutes');
 
@@ -52,7 +53,7 @@ app.get('/', (req, res) => {
 // all routes related to authentication
 app.use('/auth', authRoutes);
 app.use('/devs', devRoutes);
-app.use('/portfolio', portfolioRoutes);
+// app.use('/portfolio', portfolioRoutes);
 app.use('/work',workRoutes);
 app.use('/dev',Track);
 app.use('/dev/data',PersonalData);
@@ -62,6 +63,8 @@ app.use('/devs',project);
 app.use('/build',resumeMaker);
 app.use('/devs',socials);
 app.use('/devs',service);
+app.use('/devs',licenceCerification);
+
 
 app.use(cookieParser());
 
