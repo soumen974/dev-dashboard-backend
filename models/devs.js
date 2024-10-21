@@ -8,6 +8,7 @@ const devsSchema = new mongoose.Schema({
   password: { type: String},
   security_question: { type: String,sparse: true},
   security_answer: { type: String,sparse: true },
+  total_storageUsage: { type: Number, default: 0 },
 }, { timestamps: true });
 
 const Devs = mongoose.model('Devs', devsSchema);
