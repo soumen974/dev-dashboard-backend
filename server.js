@@ -8,6 +8,7 @@ const session = require('express-session');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const jwt = require('jsonwebtoken');
 const devRoutes = require('./routes/devRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 const portfolioRoutes = require('./routes/portfolioRoutes');
 const workRoutes=require('./routes/WorkListingRoutes');
 const Track=require('./routes/TrackRoutes');
@@ -53,6 +54,7 @@ app.get('/', (req, res) => {
 // all routes related to authentication
 app.use('/auth', authRoutes);
 app.use('/devs', devRoutes);
+app.use('/api', chatRoutes);
 // app.use('/portfolio', portfolioRoutes);
 app.use('/work',workRoutes);
 app.use('/dev',Track);
