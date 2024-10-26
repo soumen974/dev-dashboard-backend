@@ -1,5 +1,6 @@
 const ImageKit = require("imagekit");
-
+const Chat = require("../models/chat");
+const UserChats = require("../models/userChats");
 
 
 const imagekit = new ImageKit({
@@ -13,4 +14,59 @@ const imagekit = new ImageKit({
   	res.send(result);
 }
 
-module.exports = {imageUpload};
+const chat = async (req, res) =>{
+	const username = req.devs.username;
+	const {text} = req.body;
+	try {
+		// Create a new chat entry
+		const newChat = new Chat({
+		  username: username,
+		  history: [{ role: "user", parts: [{ text }] }],
+		});
+		const savedChat = await newChat.save();
+	
+		// Check if the user already has a UserChats entry
+		const userChats = await UserChats.find({ username: username });
+	
+		if (!userChats.length) {
+		  // Create a new UserChats document
+		  const newUserChats = new UserChats({
+			username: username,
+			chats: [{ _id: savedChat._id, title: text.substring(0, 40) }],
+		  });
+		  await newUserChats.save();
+		} else {
+		  // Update the existing UserChats with the new chat
+		  await UserChats.updateOne(
+			{ username: username },
+			{
+			  $push: {
+				chats: { _id: savedChat._id, title: text.substring(0, 40) },
+			  },
+			}
+		  );
+		}
+		res.status(201).send(newChat._id);
+	  } catch (error) {
+		console.log(error);
+		res.status(500).send("Error creating chat!");
+	  }
+	
+}
+
+const userChats = async (req, res) => {
+	const username = req.devs.username;
+	try {
+		const userChats = await UserChats.find({username});
+
+		res.status(200).send(userChats[0].chats);
+
+	} catch (error) {
+		console.log(error);
+		res.status(500).send("Error fetching Userchats!");
+	}
+}
+
+
+
+module.exports = {imageUpload, chat, userChats};
