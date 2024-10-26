@@ -2,20 +2,31 @@ const Track = require('../models/track');
 
 const createOrUpdateTrack = async (req, res) => {
   try {
-    const username = req.devs.username; 
-    const { github_id, github_token, codeforces_id, codeforces_token, codechef_id, codechef_token, hackerrank_id, hackerrank_token, leetcode_id, leetcode_token } = req.body;
+    const { username } = req.devs; 
+    const { 
+      github_id, github_token, 
+      codeforces_id, codeforces_token, 
+      codechef_id, codechef_token, 
+      hackerrank_id, hackerrank_token, 
+      leetcode_id, leetcode_token 
+    } = req.body;
 
     const trackData = await Track.findOneAndUpdate(
       { username },
       {
-        username,
-        github: { github_id, token: github_token },
-        codeforces: { codeforces_id, token: codeforces_token },
-        codechef: { codechef_id, token: codechef_token },
-        hackerrank: { hackerrank_id, token: hackerrank_token },
-        leetcode: { leetcode_id, token: leetcode_token }
+        username, // Ensure the username is set in case of upsert
+        github_id,
+        github_token,
+        codeforces_id,
+        codeforces_token,
+        codechef_id,
+        codechef_token,
+        hackerrank_id,
+        hackerrank_token,
+        leetcode_id,
+        leetcode_token
       },
-      { new: true, upsert: true } 
+      { new: true, upsert: true, runValidators: true }
     );
 
     res.status(200).json({
@@ -27,6 +38,8 @@ const createOrUpdateTrack = async (req, res) => {
   }
 };
 
+
+
 const getTrackInfo = async (req, res) => {
   try {
     const username = req.devs.username;
@@ -36,7 +49,7 @@ const getTrackInfo = async (req, res) => {
       return res.status(404).json({ message: 'Track information not found' });
     }
 
-    res.status(200).json({ track: trackData });
+    res.status(200).json( trackData );
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }
