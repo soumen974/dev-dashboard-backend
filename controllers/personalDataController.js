@@ -36,7 +36,6 @@ const createOrUpdatePersonalData = async (req, res) => {
 };
 
 
-
 const getPersonalData = async (req, res) => {
     try {
         const username=req.devs.username;
