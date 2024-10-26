@@ -2,7 +2,8 @@ const express = require('express');
 const {
     createOrUpdatePersonalData,
     getPersonalData,
-    deletePersonalData
+    deletePersonalData,
+    getPersonalDataForOutside
 } = require('../controllers/personalDataController');
 const authenticateToken = require('../middlewares/authenticateToken');
 const multer = require('multer');
@@ -17,6 +18,7 @@ const router = express.Router();
 router.post('/personal_data',authenticateToken,upload.fields([{ name: 'imageUrl' }, { name: 'resumeUrl' }]), createOrUpdatePersonalData);
 
 router.get('/personal_data',authenticateToken, getPersonalData);
+router.get('/personal_data/:username', getPersonalDataForOutside);
 
 
 router.delete('/personal_data',authenticateToken, deletePersonalData);

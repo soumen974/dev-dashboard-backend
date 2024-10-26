@@ -36,7 +36,6 @@ const createOrUpdatePersonalData = async (req, res) => {
 };
 
 
-
 const getPersonalData = async (req, res) => {
     try {
         const username=req.devs.username;
@@ -71,10 +70,26 @@ const deletePersonalData = async (req, res) => {
     }
 };
 
+const getPersonalDataForOutside = async (req, res) => {
+    try {
+        const { username } = req.params;
+        // Find personal data by username
+        const personalData = await PersonalData.findOne({ username }).select('-_id -username -__v -createdAt -updatedAt');
+        if (!personalData) {
+            return res.status(404).json({ message: 'Personal data not found for this user' });
+        }
+
+        res.status(200).json( personalData );
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
 
 
 module.exports = {
     createOrUpdatePersonalData,
     getPersonalData,
-    deletePersonalData
+    deletePersonalData,
+    getPersonalDataForOutside
 };
