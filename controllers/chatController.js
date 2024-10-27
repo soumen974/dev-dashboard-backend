@@ -67,6 +67,46 @@ const userChats = async (req, res) => {
 	}
 }
 
+const chats = async (req, res) => {
+	const username = req.devs.username;
+	try {
+		const chats = await Chat.findOne({_id:req.params.id ,username});
 
+		res.status(200).send(chats);
 
-module.exports = {imageUpload, chat, userChats};
+	} catch (error) {
+		console.log(error);
+		res.status(500).send("Error fetching chats!");
+	}
+}
+
+const updateChats = async (req, res) => {
+	const username = req.devs.username;
+
+	const { question, answer, img } = req.body;
+
+	const newItems = [
+		...(question
+		  ? [{ role: "user", parts: [{ text: question }], ...(img && { img }) }]
+		  : []),
+		{ role: "model", parts: [{ text: answer }] },
+	  ];
+	try {
+		const updatedChat = await Chat.updateOne({_id: req.params.id, username},{
+			$push: {
+				history:{
+					$each: newItems
+				}
+			}
+		}
+	)
+	res.status(200).send(updatedChat);
+	
+	} catch (error) {
+		console.log(error);
+		res.status(500).send("Error adding Conversations!");
+	}
+	
+}
+
+module.exports = {imageUpload, chat, userChats, chats, updateChats};
