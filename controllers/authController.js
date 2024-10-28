@@ -226,6 +226,28 @@ const logout = (req, res) => {
   res.status(200).send('Logout successful');
 };
 
+// const logout = (req, res) => {
+//   if (req.user) {
+//     req.logout((err) => {
+//       if (err) {
+//         console.error("Logout error:", err);
+//         return res.status(500).json({ error: "Logout failed" });
+//       }
+//       console.log("User  logged out successfully.");
+//       res.clearCookie('token');
+//       res.clearCookie('googleAccessToken');
+//       res.clearCookie('googleRefreshToken');
+//       return res.status(200).json({ message: "Logged out successfully" });
+//     });
+//   } else {
+//     console.log("User  was not authenticated.");
+//     res.clearCookie('token');
+//     res.clearCookie('googleAccessToken');
+//     res.clearCookie('googleRefreshToken');
+//     return res.status(200).json({ message: "Logged out successfully" });
+//   }
+// };
+
 // Protected route controller
 const protectedRoute = (req, res) => {
   res.status(200).json({

@@ -2,11 +2,12 @@
 const mongoose = require('mongoose');
 
 const reminderSchema = new mongoose.Schema({
-    userId: String,
-    title: String,
-    description: String,
-    time: Date,
-    googleEventId: String,
+  username:  String, 
+  eventname: String,
+  eventdesc: String, 
+  startdate: Date,   
+  enddate:   Date,
+  calendarId: String,
   });
 
   const Reminder = mongoose.model('Reminder', reminderSchema);
