@@ -7,31 +7,28 @@ const passport = require('passport');
 const session = require('express-session');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const jwt = require('jsonwebtoken');
+const Dev = require('./models/devs');
+
+// Import routes
 const devRoutes = require('./routes/devRoutes');
 const chatRoutes = require('./routes/chatRoutes');
-const portfolioRoutes = require('./routes/portfolioRoutes');
-const workRoutes=require('./routes/WorkListingRoutes');
-const Track=require('./routes/TrackRoutes');
-const PersonalData=require('./routes/PersonalDataRoutes');
-const educationData=require('./routes/educationDataRoutes');
+const workRoutes = require('./routes/WorkListingRoutes');
+const Track = require('./routes/TrackRoutes');
+const PersonalData = require('./routes/PersonalDataRoutes');
+const educationData = require('./routes/educationDataRoutes');
 const recentExperience = require('./routes/recentExperienceRoutes');
-const project=require('./routes/projectRoutes');
-const socials=require('./routes/socialRoutes');
-const service=require('./routes/serviceRoutes');
-const licenceCerification =require('./routes/licenceCertificationRoutes');
+const project = require('./routes/projectRoutes');
+const socials = require('./routes/socialRoutes');
+const service = require('./routes/serviceRoutes');
+const licenceCerification = require('./routes/licenceCertificationRoutes');
+const resumeMaker = require('./routes/resumePdfMakeRoutes');
+const authRoutes = require('./routes/authRoutes');
 
-const resumeMaker=require('./routes/resumePdfMakeRoutes');
-
-const { google } = require('googleapis');
-
+// Connect to database
 const connectDB = require('./models/db');
 connectDB();
 
-require('dotenv').config();
-
-const executeQuery = require('./utils/executeQuery');
-const authRoutes = require('./routes/authRoutes');
-
+// Middleware setup - Order is important
 app.use(cors({
   origin: [
     'http://localhost:3000', 
@@ -48,159 +45,177 @@ app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.get('/', (req, res) => {
-  res.send(`Welcome to Developer dashboard : Backend `);
-});
-
-// all routes related to authentication
-app.use('/auth', authRoutes);
-app.use('/devs', devRoutes);
-app.use('/api', chatRoutes);
-// app.use('/portfolio', portfolioRoutes);
-app.use('/work',workRoutes);
-app.use('/dev',Track);
-app.use('/dev/data',PersonalData);
-app.use('/dev',educationData);
-app.use('/dev',recentExperience);
-app.use('/devs',project);
-app.use('/build',resumeMaker);
-app.use('/devs',socials);
-app.use('/devs',service);
-app.use('/devs',licenceCerification);
-
-
-app.use(cookieParser());
-
-
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Dashboard backend listening at http://localhost:${PORT}`);
-});
-
-
-
-
-
-
-const Dev = require('./models/devs'); 
-const  Reminder= require('./models/reminderSchema');
-
-
-
-
-// Configure session middleware
+// Session configuration - Must be before passport
 app.use(session({
-  secret: process.env.SESSION_SECRET, 
-  resave: false, 
-  saveUninitialized: false, 
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
   cookie: {
-    httpOnly: true, 
-    secure: process.env.NODE_ENV === 'production', 
-    sameSite: 'none', 
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
 
-// Configure Passport for Google OAuth
+// Initialize passport and session
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Passport serialization
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await Dev.findById(id);
+    done(null, user);
+  } catch (err) {
+    done(err);
+  }
+});
+
+// Google OAuth Strategy
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL: `${process.env.BACKEND_API}/auth/google/callback`,
-  passReqToCallback: true // Allow access to req and res
+  passReqToCallback: true
 },
 async (req, accessToken, refreshToken, profile, done) => {
-  const email = profile.emails[0].value;
-
   try {
+    // Check if we have an email
+    if (!profile.emails?.[0]?.value) {
+      return done(null, false, { message: 'No email provided from Google' });
+    }
+
+    const email = profile.emails[0].value;
     let dev = await Dev.findOne({ email });
 
     if (dev) {
-      // If the user exists, proceed with authentication
+      // Existing user
       return done(null, dev);
     } else {
-      // If the user doesn't exist, redirect to registration
-      // Pass the email to the frontend for registration
-      return done(null, false, { email }); 
+      // New user - we'll handle this differently
+      const userData = {
+        email,
+        name: profile.displayName,
+        picture: profile.photos?.[0]?.value,
+        googleId: profile.id
+      };
+      
+      // Create a new user with minimum required fields
+      const newDev = new Dev({
+        email: userData.email,
+        name: userData.name,
+        // Generate a temporary username from email
+        username: email.split('@')[0] + Math.random().toString(36).substring(2, 5)
+      });
+
+      await newDev.save();
+      return done(null, newDev);
     }
   } catch (err) {
     return done(err);
   }
-}));
+}
+));
 
-// Google OAuth login route (Redirect to Google login)
-const googleLogin = passport.authenticate('google', { scope: ['profile', 'email'] });
+// Auth routes
+app.get('/auth/google', 
+passport.authenticate('google', { 
+  scope: ['profile', 'email'],
+  prompt: 'select_account'
+})
+);
 
+app.get('/auth/google/callback',
+passport.authenticate('google', { failWithError: true }),
+async (req, res) => {
+  try {
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        id: req.user._id, 
+        email: req.user.email,
+        username: req.user.username
+      }, 
+      process.env.SECRET_KEY,
+      { expiresIn: '5d' }
+    );
 
-// Google OAuth callback route
-const googleCallback = [
-  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND}/auth/register` }),
-  (req, res) => {
-    if (!req.user) {
-      // If the user was not found, redirect to the registration page with email query
-      const email = req.authInfo?.email;  // Retrieve the email passed from the Google strategy
-      return res.redirect(`${process.env.FRONTEND}/auth/register?email=${email}`);
-    }
+    // Set cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 5 * 24 * 60 * 60 * 1000  // 5 days
+    });
 
-    // Issue JWT token if user exists
-    const token = jwt.sign({ id: req.user._id, email: req.user.email, username: req.user.username }, process.env.SECRET_KEY, { expiresIn: '5d' });
+    // Check if this is a new user (by checking if username is the auto-generated one)
+    const isNewUser = req.user.username.includes(req.user.email.split('@')[0]);
     
-    res.cookie('token', token, { httpOnly: true,secure: process.env.NODE_ENV === 'production', sameSite: 'None' });
-    res.redirect(`${process.env.FRONTEND}/dashboard`);
+    if (isNewUser) {
+      // Redirect new users to complete their profile
+      const queryParams = new URLSearchParams({
+        email: req.user.email,
+        name: req.user.name || '',
+        userId: req.user._id
+      });
+      res.redirect(`${process.env.FRONTEND}/auth/complete-profile?${queryParams}`);
+    } else {
+      // Redirect existing users to dashboard
+      res.redirect(`${process.env.FRONTEND}/dashboard`);
+    }
+  } catch (error) {
+    console.error('Authentication error:', error);
+    res.redirect(`${process.env.FRONTEND}/auth/error`);
   }
-];
+},
+// Error handler
+(err, req, res, next) => {
+  console.error('Google Auth Error:', err);
+  res.redirect(`${process.env.FRONTEND}/auth/error?message=${encodeURIComponent(err.message)}`);
+}
+);
+// API Routes
+app.get('/', (req, res) => {
+  res.send('Welcome to Developer dashboard : Backend');
+});
 
-// Routes for Google OAuth
-app.get('/auth/google', googleLogin);
-app.get('/auth/google/callback', googleCallback);
+// Mount route handlers
+app.use('/auth', authRoutes);
+app.use('/devs', devRoutes);
+app.use('/api', chatRoutes);
+app.use('/work', workRoutes);
+app.use('/dev', Track);
+app.use('/dev/data', PersonalData);
+app.use('/dev', educationData);
+app.use('/dev', recentExperience);
+app.use('/devs', project);
+app.use('/build', resumeMaker);
+app.use('/devs', socials);
+app.use('/devs', service);
+app.use('/devs', licenceCerification);
 
-
-// --------------------
-
-// Reminder route
-// app.post('/api/addReminder', ensureAuthenticated, async (req, res) => {
-//   const { reminderData } = req.body;
-//   const accessToken = req.cookies.accessToken;
-//   const refreshToken = req.cookies.refreshToken;
-
-//   // const user = await Dev.findById(req.devs.id);
-
-//   // const dev = 
+// Enhanced error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server Error:', err);
   
-//   const user = await Dev.findById(req.devs.id);
+  // Determine error status
+  const status = err.status || 500;
+  
+  // Send appropriate error response
+  res.status(status).json({ 
+    error: status === 500 ? 'Internal server error' : err.message,
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
 
-//   if (accessToken) {
-//     return res.status(401).send('Google access token not found. Please authenticate.');
-//   }
-
-//   const auth = new google.auth.OAuth2();
-//   auth.setCredentials({ access_token: accessToken });
-
-//   const event = {
-//     summary: reminderData.title,
-//     description: reminderData.description,
-//     start: { dateTime: reminderData.time, timeZone: 'UTC' },
-//     end: { dateTime: reminderData.time, timeZone: 'UTC' },
-//   };
-
-//   try {
-//     const calendar = google.calendar({ version: 'v3', auth });
-//     const calendarResponse = await calendar.events.insert({
-//       calendarId: 'primary',
-//       resource: event,
-//     });
-
-//     const newReminder = new Reminder({
-//       userId: req.devs.id,
-//       title: reminderData.title,
-//       description: reminderData.description,
-//       time: reminderData.time,
-//       googleEventId: calendarResponse.data.id,
-//     });
-
-//     await newReminder.save();
-//     res.status(200).send('Reminder added successfully');
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).send('Error adding reminder');
-//   }
-// });
+// Start server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Dashboard backend listening at http://localhost:${PORT}`);
+});
