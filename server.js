@@ -163,7 +163,7 @@ async (req, res) => {
         name: req.user.name || '',
         userId: req.user._id
       });
-      res.redirect(`${process.env.FRONTEND}/auth/complete-profile?${queryParams}`);
+      res.redirect(`${process.env.FRONTEND}/dashboard`);
     } else {
       // Redirect existing users to dashboard
       res.redirect(`${process.env.FRONTEND}/dashboard`);
