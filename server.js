@@ -149,8 +149,7 @@ async (req, res) => {
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 5 * 24 * 60 * 60 * 1000  // 5 days
+      sameSite: 'None' ,
     });
 
     // Check if this is a new user (by checking if username is the auto-generated one)
