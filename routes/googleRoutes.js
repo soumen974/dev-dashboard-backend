@@ -2,6 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const { success, failed, logout } = require('../controllers/googleController');
 
+
 const router = express.Router();
 
 // Route for initiating Google OAuth login
@@ -23,5 +24,9 @@ router.get('/google/failed', failed);
 
 // Route for Google OAuth logout
 router.post('/google/logout', logout);
+// router.get('/protecteds', authenticateToken, protectedRoute);
 
+router.get('/google/success', success);
 module.exports = router;
+
+

@@ -75,6 +75,11 @@ const register = [
       await sendVerificationEmail(email, verificationCode);
 
       res.status(201).json({ message: `Verification code sent to ${email}` });
+
+        setTimeout(() => {
+          EmailVerification.deleteOne({ email });
+      }, 360000);
+      
     } catch (err) {
       res.status(500).send(`Error processing request: ${err.message}`);
     }
@@ -96,7 +101,9 @@ const verifyEmail = [
     try {
       const verification = await EmailVerification.findOne({ email, code });
       if (!verification || verification.expiresAt < Date.now()) {
+        await EmailVerification.deleteOne({ email });
         return res.status(400).json({ error: 'Invalid or expired verification code' });
+
       }
 
       await EmailVerification.deleteOne({ email });
@@ -144,7 +151,7 @@ const addPassword = [
         { expiresIn: '5d' }
       );
 
-      res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' });
+      res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'None' });
 
       return res.status(201).json({ message: 'Developer added successfully', token });
     } catch (err) {
@@ -205,8 +212,8 @@ const login = [
         { expiresIn: '5d' }
       );
 
-      // Set token as an HttpOnly cookie
-      res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None' });
+      res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'None' });
+      // secure true
       return res.status(200).json({ message: 'Developer logged in successfully' });
     } catch (err) {
       res.status(500).json({ error: `Error logging in: ${err.message}` });
@@ -219,34 +226,12 @@ const login = [
 // Logout controller
 const logout = (req, res) => {
   res.clearCookie('token', {
-    httpOnly: true,
-    secure: true,  
-    sameSite: 'None'
+    httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'None' 
   });
   res.status(200).send('Logout successful');
 };
 
-// const logout = (req, res) => {
-//   if (req.user) {
-//     req.logout((err) => {
-//       if (err) {
-//         console.error("Logout error:", err);
-//         return res.status(500).json({ error: "Logout failed" });
-//       }
-//       console.log("User  logged out successfully.");
-//       res.clearCookie('token');
-//       res.clearCookie('googleAccessToken');
-//       res.clearCookie('googleRefreshToken');
-//       return res.status(200).json({ message: "Logged out successfully" });
-//     });
-//   } else {
-//     console.log("User  was not authenticated.");
-//     res.clearCookie('token');
-//     res.clearCookie('googleAccessToken');
-//     res.clearCookie('googleRefreshToken');
-//     return res.status(200).json({ message: "Logged out successfully" });
-//   }
-// };
+
 
 // Protected route controller
 const protectedRoute = (req, res) => {

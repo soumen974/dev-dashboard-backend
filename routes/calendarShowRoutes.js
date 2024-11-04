@@ -2,8 +2,9 @@
 const express = require('express');
 const router = express.Router();
 const { showUserCalendar } = require('../controllers/calendarShowController');
-const googleAuthenticate = require('../middlewares/googleAuthenticate');
+const authenticateToken = require('../middlewares/authenticateToken');
 
-router.get('/show', googleAuthenticate, showUserCalendar);
+
+router.get('/show', authenticateToken, showUserCalendar);
 
 module.exports = router;

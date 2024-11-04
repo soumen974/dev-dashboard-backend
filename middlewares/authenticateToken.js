@@ -1,71 +1,79 @@
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
-
-
-function authenticateToken(req, res, next) {
-  const token = req.cookies.token; 
-  const accessToken = req.cookies.accessToken;
-  const refreshToken = req.cookies.refreshToken;
- 
-
-  if (!token) {
-    // res.redirect('http://localhost:3000/');
-    return res.status(403).json({ error: 'Token required' });
-  }
-
-  jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
-    if (err) {
-      return res.status(400).json({ error: 'Invalid token' });
-    }
-
-    // Attach user information to request object
-    req.devs = {
-      username: decoded.username,
-      id: decoded.id,
-      email: decoded.email,
-    };
-
-    next(); // Pass control to the next middleware or route handler
-  });
-}
-
-module.exports = authenticateToken;
+// const jwt = require('jsonwebtoken');
+// require('dotenv').config();
 
 
 // function authenticateToken(req, res, next) {
-//   const token = req.cookies.token;
-//   const googleAccessToken = req.cookies.googleAccessToken;
-//   const googleRefreshToken = req.cookies.googleRefreshToken;
+//   const token = req.cookies.token; 
+//   // const accessToken = req.cookies.accessToken;
+//   // const refreshToken = req.cookies.refreshToken;
+ 
 
-//   if (!token && !googleAccessToken) {
+//   if (!token) {
 //     return res.status(403).json({ error: 'Token required' });
 //   }
 
-//   if (token) {
-//     jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
-//       if (err) {
-//         return res.status(400).json({ error: 'Invalid token' });
-//       }
-//       req.devs = {
-//         username: decoded.username,
-//         id: decoded.id,
-//         email: decoded.email,
-//       };
-//       next();
-//     });
-//   } else if (googleAccessToken) {
+//   jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
+//     if (err) {
+//       return res.status(400).json({ error: 'Invalid token' });
+//     }
+
+//     // Attach user information to request object
 //     req.devs = {
-//       username: req.user?.username,
-//       id: req.user?.id,
-//       email: req.user?.email,
+//       username: decoded.username,
+//       id: decoded.id,
+//       email: decoded.email,
 //     };
-//     req.user = {
-//       googleAccessToken,
-//       googleRefreshToken,
-//     };
-//     next();
-//   }
+
+//     next(); // Pass control to the next middleware or route handler
+//   });
 // }
 
-
 // module.exports = authenticateToken;
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
+const Dev = require('../models/devs');
+
+async function authenticateToken(req, res, next) {
+    const token = req.cookies.token;
+    const refreshToken = req.cookies.googleRefreshToken;
+
+    if (!token && !refreshToken) {
+        return res.status(403).json({ error: 'Token required' });
+    }
+
+    jwt.verify(token, process.env.SECRET_KEY, async (err, decoded) => {
+        if (err && refreshToken) {
+            try {
+                const decodedRefreshToken = jwt.decode(token); // Decode without verifying
+                const newToken = jwt.sign(
+                    {
+                        id: decodedRefreshToken.id,
+                        email: decodedRefreshToken.email,
+                        username: decodedRefreshToken.username,
+                    },
+                    process.env.SECRET_KEY,
+                    { expiresIn: '5d' }
+                );
+
+                res.cookie('token', newToken, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: 'None',
+                    maxAge: 5 * 24 * 60 * 60 * 1000,
+                });
+
+                req.devs = decodedRefreshToken;
+                next();
+            } catch (refreshError) {
+                return res.status(500).json({ error: 'Failed to refresh access token' });
+            }
+        } else if (decoded) {
+            req.devs = decoded;
+            next();
+        } else {
+            return res.status(400).json({ error: 'Invalid access token' });
+        }
+    });
+}
+
+module.exports = authenticateToken;

@@ -2,15 +2,15 @@
 const mongoose = require('mongoose');
 
 const devsSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true },
-    name: { type: String },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    security_question: { type: String },
-    security_answer: { type: String },
-    googleAccessToken: { type: String }, 
-    googleRefreshToken: { type: String }  
-});
+  username: { type: String, required: true,unique: true },
+  name: { type: String ,sparse :true},
+  email: { type: String, required: true, unique: true },
+  password: { type: String},
+  security_question: { type: String,sparse: true},
+  security_answer: { type: String,sparse: true },
+  total_storageUsage: { type: Number, default: 0 },
+  // googleRefreshToken: { type: String },
+}, { timestamps: true });
 
 const Devs = mongoose.model('Devs', devsSchema);
 module.exports = Devs;

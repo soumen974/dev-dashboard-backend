@@ -21,11 +21,9 @@ passport.use(
                 let user = await Dev.findOne({ email });
 
                 if (user) {
-                    // Store refresh token in the database
-                    user.googleRefreshToken = refreshToken || user.googleRefreshToken; // Update if available
-                    await user.save();
-
-                    // Access token will be set in cookies later
+                    
+                    user.googleAccessToken = accessToken;
+                    user.googleRefreshToken = refreshToken;
                     return done(null, user);
                 } else {
                     const username = profile.displayName.replace(/\s+/g, '') + Math.random().toString(36).substring(2, 5);
@@ -34,11 +32,10 @@ passport.use(
                     const name = profile.displayName;
 
                     user = new Dev({
-                        username: username,
-                        email: email,
-                        name: name,
+                        username,
+                        email,
+                        name,
                         password: hashedPassword,
-                        googleRefreshToken: refreshToken || null, // Store refresh token if available
                     });
 
                     await user.save();
@@ -51,6 +48,7 @@ passport.use(
         }
     )
 );
+
 
 passport.serializeUser((user, done) => {
     done(null, user.id);
@@ -65,36 +63,39 @@ passport.deserializeUser(async (id, done) => {
     }
 });
 
-// Success callback after Google authentication
+
 const success = async (req, res) => {
     try {
         if (req.user) {
+            // Generate a JWT token including developer details
             const token = jwt.sign(
                 {
                     id: req.user.id,
                     email: req.user.email,
-                    username: req.user.username
+                    username: req.user.username,
                 },
                 process.env.SECRET_KEY,
-                {
-                    expiresIn: '5d'
-                }
+                { expiresIn: '5d' }
             );
 
-            // Set JWT token in cookies
+            // Set JWT and Google tokens in cookies
             res.cookie('token', token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: true,
+                sameSite: 'None',
                 maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days
             });
-
-            // Set Access Token in cookies
-            res.cookie('googleAccessToken', req.user.googleAccessToken, { // Make sure to retrieve the token from the user
+            res.cookie('googleAccessToken', req.user.googleAccessToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: true,
-                maxAge: 5 * 60 * 1000, // For example, 5 minutes, adjust as needed
+                sameSite: 'None',
+                maxAge: 5 * 24 * 60 * 60 * 1000,
+            });
+            res.cookie('googleRefreshToken', req.user.googleRefreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'None',
+                maxAge: 5 * 24 * 60 * 60 * 1000,
             });
 
             res.redirect(`${process.env.FRONTEND}/dashboard`);
@@ -137,5 +138,6 @@ const logout = (req, res) => {
     res.status(200).json({ message: 'Logout successful' });
 };
 
-module.exports = { success, failed, logout };
+
+module.exports = { success, failed, logout};
 
