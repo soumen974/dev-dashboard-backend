@@ -2,9 +2,12 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const path = require('path');
 const cloudinary = require('cloudinary').v2;
+const PersonalData = require('../models/personalData');
+
 
 const generatePDF = (req, res) => {
   const { latexCode } = req.body;
+  const username = req.devs.username;
 
   const sanitize = (input) => input
     ? input.replace(/([#%&{}~_^\\$])/g, '\\$1').replace(/([\"`])/g, '\\$1')
@@ -55,12 +58,18 @@ const generatePDF = (req, res) => {
             return res.status(500).send('Failed to upload PDF to Cloudinary');
           }
 
+          // const resumeUrl =uploadResult.secure_url;
+          // const personalData =  PersonalData.findOneAndUpdate(
+          //   { username },
+          //   resumeUrl,
+          //   { new: true, upsert: true, runValidators: true }
+          // );
+
           console.log(`PDF successfully uploaded to Cloudinary: ${uploadResult.secure_url}`);
 
           // Send the Cloudinary URL as the response
           res.json({ pdf_url: uploadResult.secure_url });
 
-          // Clean up files (delete .tex, .pdf, .log, and .aux files)
           fs.unlink(texFilePath, (unlinkErr) => {
             if (unlinkErr) console.error(`Error deleting .tex file: ${unlinkErr.message}`);
           });
