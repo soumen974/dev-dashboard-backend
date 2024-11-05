@@ -35,7 +35,6 @@ const createOrUpdatePersonalData = async (req, res) => {
     }
 };
 
-
 const getPersonalData = async (req, res) => {
     try {
         const username=req.devs.username;
@@ -52,7 +51,6 @@ const getPersonalData = async (req, res) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
-
 
 const deletePersonalData = async (req, res) => {
     try {
