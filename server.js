@@ -8,6 +8,8 @@ const cookieParser = require('cookie-parser');
 const passport = require('passport');
 const session = require('express-session');
 const googleController = require('./controllers/GoogleAuthController');
+// require('./controllers/googleAuthController').configurePassport();
+
 
 // Import routes
 const googleRoutes = require('./routes/GoogleAuthRoutes');
@@ -25,6 +27,7 @@ const service = require('./routes/serviceRoutes');
 const licenceCerification = require('./routes/licenceCertificationRoutes');
 const resumeMaker = require('./routes/resumePdfMakeRoutes');
 const authRoutes = require('./routes/authRoutes');
+const classTimeTable = require('./routes/scheduleRoutes');
 
 // Connect to database
 const connectDB = require('./models/db');
@@ -88,6 +91,7 @@ app.use('/build', resumeMaker);
 app.use('/devs', socials);
 app.use('/devs', service);
 app.use('/devs', licenceCerification);
+app.use('/api', classTimeTable);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
