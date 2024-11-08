@@ -2,9 +2,9 @@
 const express = require('express');
 const router = express.Router();
 const { showUserCalendar } = require('../controllers/calendarShowController');
-const authenticateToken = require('../middlewares/authenticateToken');
+// const authenticateToken = require('../middlewares/authenticateToken');
 
 
-router.get('/show', authenticateToken, showUserCalendar);
+router.get('/show', showUserCalendar);
 
 module.exports = router;

@@ -29,51 +29,44 @@
 // }
 
 // module.exports = authenticateToken;
+
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const Dev = require('../models/devs');
 
-async function authenticateToken(req, res, next) {
-    const token = req.cookies.token;
-    const refreshToken = req.cookies.googleRefreshToken;
+function authenticateToken(req, res, next) {
+  const token = req.cookies.token;
+  const googleAccessToken = req.cookies.google_access_token;
+  const googleRefreshToken = req.cookies.google_refresh_token;
 
-    if (!token && !refreshToken) {
-        return res.status(403).json({ error: 'Token required' });
+  if (!token) {
+    return res.status(403).json({ error: 'JWT Token required' });
+  }
+
+  jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
+    if (err) {
+      return res.status(400).json({ error: 'Invalid JWT token' });
     }
 
-    jwt.verify(token, process.env.SECRET_KEY, async (err, decoded) => {
-        if (err && refreshToken) {
-            try {
-                const decodedRefreshToken = jwt.decode(token); // Decode without verifying
-                const newToken = jwt.sign(
-                    {
-                        id: decodedRefreshToken.id,
-                        email: decodedRefreshToken.email,
-                        username: decodedRefreshToken.username,
-                    },
-                    process.env.SECRET_KEY,
-                    { expiresIn: '5d' }
-                );
+    // Attach user information to request object
+    req.devs = {
+      username: decoded.username,
+      id: decoded.id,
+      email: decoded.email,
+    };
 
-                res.cookie('token', newToken, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: 'None',
-                    maxAge: 5 * 24 * 60 * 60 * 1000,
-                });
+    // Check for Google access token
+    if (!googleAccessToken) {
+      return res.status(401).json({ error: 'Google access token required' });
+    }
+    
+    // Optional: Attach Google tokens if needed
+    req.googleTokens = {
+      accessToken: googleAccessToken,
+      refreshToken: googleRefreshToken,
+    };
 
-                req.devs = decodedRefreshToken;
-                next();
-            } catch (refreshError) {
-                return res.status(500).json({ error: 'Failed to refresh access token' });
-            }
-        } else if (decoded) {
-            req.devs = decoded;
-            next();
-        } else {
-            return res.status(400).json({ error: 'Invalid access token' });
-        }
-    });
+    next(); // Pass control to the next middleware or route handler
+  });
 }
 
 module.exports = authenticateToken;
