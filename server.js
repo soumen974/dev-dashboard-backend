@@ -99,6 +99,7 @@ app.use('/devs', licenceCerification);
 app.use('/api', classTimeTable);
 app.use('/google',connectCalendar);
 app.use('/calendar',calendarRoutes);
+app.use('/google', connectCalendar);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
