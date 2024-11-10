@@ -23,15 +23,10 @@ exports.configurePassport = () => {
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: `${process.env.BACKEND_API}/auth/google/callback`,
-    passReqToCallback: true,
-     scope: ['profile', 'email','https://www.googleapis.com/auth/calendar'],
-    accessType: 'offline',
-    prompt: 'consent'
+    passReqToCallback: true
   },
   async (req, accessToken, refreshToken, profile, done) => {
     try {
-      console.log('Access Token:', accessToken);
-      console.log('Refresh Token:', refreshToken);
       if (!profile.emails?.[0]?.value) {
         return done(null, false, { message: 'No email provided from Google' });
       }
@@ -70,28 +65,26 @@ exports.handleGoogleCallback = async (req, res) => {
       { expiresIn: '5d' }
     );
 
+    req.session.username = req.user.username;
+    req.session.userId = req.user._id;
+    // Save session explicitly
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    console.log('Session saved:', {
+      username: req.session.username,
+      sessionID: req.sessionID
+    });
+
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'None'
     });
-
-     // Set access and refresh tokens for Google Calendar
-     res.cookie('google_access_token', req.authInfo.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'None',
-      maxAge: 60 * 60 * 1000 // 1 hour
-    });
-
-    res.cookie('google_refresh_token', req.authInfo.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'None',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
-    
-    
 
     const isNewUser = req.user.username.includes(req.user.email.split('@')[0]);
     

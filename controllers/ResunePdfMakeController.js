@@ -2,16 +2,14 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const path = require('path');
 const cloudinary = require('cloudinary').v2;
+const PersonalData = require('../models/personalData');
 
-const generatePDF = (req, res) => {
+const generatePDF = async (req, res) => {
   const { latexCode } = req.body;
+  const username = req.devs.username;
 
-  const sanitize = (input) => input
-    ? input.replace(/([#%&{}~_^\\$])/g, '\\$1').replace(/([\"`])/g, '\\$1')
-    : '';
-
-  // LaTeX Template with dynamic data
-
+  const sanitize = (input) =>
+    input ? input.replace(/([#%&{}~_^\\$])/g, '\\$1').replace(/([\"`])/g, '\\$1') : '';
 
   // Define paths
   const texDir = path.join(__dirname, 'generated');
@@ -23,56 +21,71 @@ const generatePDF = (req, res) => {
   // Ensure the directory exists
   fs.mkdirSync(texDir, { recursive: true });
 
+  // Cleanup function to delete temporary files
+  const cleanupFiles = () => {
+    [texFilePath, pdfFilePath, logFilePath, auxFilePath].forEach((filePath) => {
+      fs.unlink(filePath, (unlinkErr) => {
+        if (unlinkErr && unlinkErr.code !== 'ENOENT') {
+          console.error(`Error deleting file ${filePath}: ${unlinkErr.message}`);
+        }
+      });
+    });
+  };
+
   // Write LaTeX template to .tex file
   fs.writeFile(texFilePath, latexCode, (err) => {
     if (err) {
       console.error(`Error writing LaTeX file: ${err.message}`);
+      cleanupFiles();
       return res.status(500).send('Failed to write LaTeX file');
     }
 
-    // Compile LaTeX to PDF
+    
     exec(`pdflatex -interaction=nonstopmode -output-directory=${texDir} ${texFilePath}`, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error generating PDF: ${error.message}`);
         console.error(`stdout: ${stdout}`);
         console.error(`stderr: ${stderr}`);
+        cleanupFiles();
         return res.status(500).send('Failed to generate PDF');
       }
 
-      // Check if the PDF file exists
-      fs.stat(pdfFilePath, (err, stats) => {
+     
+      fs.stat(pdfFilePath, async (err, stats) => {
         if (err) {
           console.error(`Error checking PDF file: ${err.message}`);
+          cleanupFiles();
           return res.status(500).send('PDF file not generated');
         }
 
         console.log(`PDF file generated: ${pdfFilePath} (${stats.size} bytes)`);
 
-        // Upload PDF to Cloudinary
-        cloudinary.uploader.upload(pdfFilePath, { resource_type: 'auto' }, (uploadErr, uploadResult) => {
+       
+        cloudinary.uploader.upload(pdfFilePath, { resource_type: 'auto' }, async (uploadErr, uploadResult) => {
           if (uploadErr) {
             console.error(`Error uploading to Cloudinary: ${uploadErr.message}`);
+            cleanupFiles();
             return res.status(500).send('Failed to upload PDF to Cloudinary');
           }
 
-          console.log(`PDF successfully uploaded to Cloudinary: ${uploadResult.secure_url}`);
+          const resumeUrl = uploadResult.secure_url;
 
-          // Send the Cloudinary URL as the response
-          res.json({ pdf_url: uploadResult.secure_url });
+          try {
+            
+            const personalData = await PersonalData.findOneAndUpdate(
+              { username },
+              { resumeUrl },
+              { new: true, upsert: true, runValidators: true }
+            );
 
-          // Clean up files (delete .tex, .pdf, .log, and .aux files)
-          fs.unlink(texFilePath, (unlinkErr) => {
-            if (unlinkErr) console.error(`Error deleting .tex file: ${unlinkErr.message}`);
-          });
-          fs.unlink(pdfFilePath, (unlinkErr) => {
-            if (unlinkErr) console.error(`Error deleting .pdf file: ${unlinkErr.message}`);
-          });
-          fs.unlink(logFilePath, (unlinkErr) => {
-            if (unlinkErr) console.error(`Error deleting .log file: ${unlinkErr.message}`);
-          });
-          fs.unlink(auxFilePath, (unlinkErr) => {
-            if (unlinkErr) console.error(`Error deleting .aux file: ${unlinkErr.message}`);
-          });
+            console.log(`PDF successfully uploaded to Cloudinary: ${resumeUrl}`);
+            res.json({ pdf_url: resumeUrl, data: personalData });
+          } catch (dbError) {
+            console.error(`Error updating PersonalData: ${dbError.message}`);
+            res.status(500).send('Failed to update resume URL in PersonalData');
+          } finally {
+            cleanupFiles(); // Clean up files after database update or error
+          }
         });
       });
     });

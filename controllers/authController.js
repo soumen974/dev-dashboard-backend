@@ -235,10 +235,17 @@ const logout = (req, res) => {
 
 // Protected route controller
 const protectedRoute = (req, res) => {
-  res.status(200).json({
-    message: 'This is a protected route',
-    developer_data: req.devs,
-  });
+  if (req.devs) {
+    // If user is authenticated and developer data exists
+    res.status(200).json({
+      message: 'This is a protected route',
+      developer_data: req.devs,
+    });
+  } else {
+    // If not authenticated, redirect to login
+    res.status(403).redirect(`${process.env.FRONTEND}/auth/login`);
+  }
 };
+
 
 module.exports = { register, verifyEmail, addPassword, checkUsername, login, logout, protectedRoute };

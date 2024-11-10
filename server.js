@@ -8,6 +8,8 @@ const cookieParser = require('cookie-parser');
 const passport = require('passport');
 const session = require('express-session');
 const googleController = require('./controllers/GoogleAuthController');
+// require('./controllers/googleAuthController').configurePassport();
+
 
 // Import routes
 const googleRoutes = require('./routes/GoogleAuthRoutes');
@@ -25,12 +27,14 @@ const service = require('./routes/serviceRoutes');
 const licenceCerification = require('./routes/licenceCertificationRoutes');
 const resumeMaker = require('./routes/resumePdfMakeRoutes');
 const authRoutes = require('./routes/authRoutes');
+const classTimeTable = require('./routes/scheduleRoutes');
+const connectCalendar = require('./routes/connectCalendarRoutes');
+const calendarRoutes = require('./routes/calendarRoutes');
 
 // Connect to database
 const connectDB = require('./models/db');
-// const calendarShowRoutes = require('./routes/calendarShowRoutes');
-const calendarRoutes = require('./routes/calendarRoutes');
-// const excelRoutes = require('./routes/timeTableRoutes');
+
+
 
 connectDB();
 
@@ -92,8 +96,9 @@ app.use('/build', resumeMaker);
 app.use('/devs', socials);
 app.use('/devs', service);
 app.use('/devs', licenceCerification);
-app.use('/google-calendar',calendarRoutes);
-// app.use('/calendar',calendarShowRoutes);
+app.use('/api', classTimeTable);
+app.use('/google',connectCalendar);
+app.use('/calendar',calendarRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
