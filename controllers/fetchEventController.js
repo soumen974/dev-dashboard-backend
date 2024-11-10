@@ -9,7 +9,7 @@ const oauth2Client = new OAuth2(
 
 const fetchCalendarEvents = async (req, res) => {
   try {
-    // Check if calendar credentials exist in cookies
+    
     const { calendar_access_token, calendar_refresh_token } = req.cookies;
 
     if (!calendar_access_token || !calendar_refresh_token) {
@@ -19,23 +19,23 @@ const fetchCalendarEvents = async (req, res) => {
       });
     }
 
-    // Set credentials and handle token refresh
+    
     oauth2Client.setCredentials({
       access_token: calendar_access_token,
       refresh_token: calendar_refresh_token,
     });
 
-    // Add token refresh handler
+   
     oauth2Client.on('tokens', (tokens) => {
       if (tokens.refresh_token) {
-        // Store the new refresh token
+        
         res.cookie('calendar_refresh_token', tokens.refresh_token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'None',
         });
       }
-      // Store the new access token
+      
       res.cookie('calendar_access_token', tokens.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -45,7 +45,7 @@ const fetchCalendarEvents = async (req, res) => {
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-    // Get current date at start of day
+    
     const now = new Date();
     now.setHours(0, 0, 0, 0);
 
@@ -59,7 +59,7 @@ const fetchCalendarEvents = async (req, res) => {
 
     const events = eventsResponse.data.items || [];
 
-    // Transform events to include only necessary data
+    
     const transformedEvents = events.map(event => ({
       id: event.id,
       summary: event.summary,
@@ -78,7 +78,7 @@ const fetchCalendarEvents = async (req, res) => {
   } catch (error) {
     console.error('Error fetching calendar events:', error);
 
-    // Handle specific error types
+   
     if (error.code === 401) {
       return res.status(401).json({
         message: 'Calendar authorization expired',
@@ -95,7 +95,7 @@ const fetchCalendarEvents = async (req, res) => {
       });
     }
 
-    // Default error response
+   
     res.status(500).json({
       message: 'Error fetching events from Google Calendar',
       error: 'FETCH_ERROR',

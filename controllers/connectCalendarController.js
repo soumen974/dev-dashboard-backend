@@ -50,10 +50,10 @@ const handleGoogleCalendarCallback = async (req, res) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
       path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000, 
     };
 
-    // Set cookies
+    
     res.cookie('calendar_access_token', tokens.access_token, cookieOptions);
     res.cookie('calendar_refresh_token', tokens.refresh_token, cookieOptions);
     res.cookie('calendar_email', calendarEmail, {
