@@ -28,9 +28,14 @@ const licenceCerification = require('./routes/licenceCertificationRoutes');
 const resumeMaker = require('./routes/resumePdfMakeRoutes');
 const authRoutes = require('./routes/authRoutes');
 const classTimeTable = require('./routes/scheduleRoutes');
+const connectCalendar = require('./routes/connectCalendarRoutes');
+const calendarRoutes = require('./routes/calendarRoutes');
 
 // Connect to database
 const connectDB = require('./models/db');
+
+
+
 connectDB();
 
 // Middleware setup
@@ -92,6 +97,8 @@ app.use('/devs', socials);
 app.use('/devs', service);
 app.use('/devs', licenceCerification);
 app.use('/api', classTimeTable);
+app.use('/google',connectCalendar);
+app.use('/calendar',calendarRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

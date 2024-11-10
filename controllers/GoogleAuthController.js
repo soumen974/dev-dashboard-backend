@@ -65,6 +65,21 @@ exports.handleGoogleCallback = async (req, res) => {
       { expiresIn: '5d' }
     );
 
+    req.session.username = req.user.username;
+    req.session.userId = req.user._id;
+    // Save session explicitly
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    console.log('Session saved:', {
+      username: req.session.username,
+      sessionID: req.sessionID
+    });
+
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

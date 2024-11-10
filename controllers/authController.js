@@ -231,6 +231,8 @@ const logout = (req, res) => {
   res.status(200).send('Logout successful');
 };
 
+
+
 // Protected route controller
 const protectedRoute = (req, res) => {
   if (req.devs) {

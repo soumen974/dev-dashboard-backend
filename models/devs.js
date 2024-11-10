@@ -9,22 +9,8 @@ const devsSchema = new mongoose.Schema({
   security_question: { type: String,sparse: true},
   security_answer: { type: String,sparse: true },
   total_storageUsage: { type: Number, default: 0 },
+  // googleRefreshToken: { type: String },
 }, { timestamps: true });
 
 const Devs = mongoose.model('Devs', devsSchema);
 module.exports = Devs;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
