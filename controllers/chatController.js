@@ -59,6 +59,12 @@ const userChats = async (req, res) => {
 	try {
 		const userChats = await UserChats.find({username});
 
+		        // Check if userChats is empty
+				if (userChats.length === 0) {
+					return res.status(200).send([]); // Return an empty array if no chats exist
+				}
+		
+
 		res.status(200).send(userChats[0].chats);
 
 	} catch (error) {
@@ -66,7 +72,7 @@ const userChats = async (req, res) => {
 		res.status(500).send("Error fetching Userchats!");
 	}
 }
-
+  
 const chats = async (req, res) => {
 	const username = req.devs.username;
 	try {
@@ -109,4 +115,25 @@ const updateChats = async (req, res) => {
 	
 }
 
-module.exports = {imageUpload, chat, userChats, chats, updateChats};
+const deleteChat = async (req, res) => {
+    const username = req.devs.username;
+    const chatId = req.params.id;
+
+    try {
+        // Remove the chat from the Chat collection
+        await Chat.deleteOne({ _id: chatId, username });
+
+        // Remove the chat from UserChats collection
+        await UserChats.updateOne(
+            { username },
+            { $pull: { chats: { _id: chatId } } }
+        );
+
+        res.status(200).send("Chat deleted successfully!");
+    } catch (error) {
+        console.log(error);
+        res.status(500).send("Error deleting chat!");
+    }
+};
+
+module.exports = { imageUpload, chat, userChats, chats, updateChats, deleteChat };
