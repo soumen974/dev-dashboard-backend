@@ -7,6 +7,15 @@ const oauth2Client = new OAuth2(
   `${process.env.BACKEND_API}/google/calendar/callback` 
 );
 
+const log = {
+  error: (message, error) => {
+    console.error(`❌ ${message}`, error?.message || error);
+  },
+  success: (message) => {
+    console.log(`✓ ${message}`);
+  }
+};
+
 const connectToGoogleCalendar = (req, res) => {
   try {
     const authUrl = oauth2Client.generateAuthUrl({
@@ -18,10 +27,9 @@ const connectToGoogleCalendar = (req, res) => {
         'https://www.googleapis.com/auth/userinfo.email'
       ],
     });
-    console.log('Redirecting to Google OAuth:', authUrl);
     res.redirect(authUrl);
   } catch (error) {
-    console.error('Error generating auth URL:', error);
+    log.error('Google Calendar connection failed', error);
     res.status(500).json({ error: 'Failed to initiate Google Calendar connection' });
   }
 };
@@ -30,12 +38,11 @@ const handleGoogleCalendarCallback = async (req, res) => {
   const code = req.query.code;
   
   if (!code) {
-    console.error('No authorization code received');
+    log.error('Authorization failed', 'No auth code received');
     return res.redirect(`${process.env.FRONTEND}/dashboard/reminder?error=no_auth_code`);
   }
 
   try {
-    console.log('Receiving callback with code:', code);
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
 
@@ -43,32 +50,36 @@ const handleGoogleCalendarCallback = async (req, res) => {
     const { data } = await oauth2.userinfo.get();
     const calendarEmail = data.email;
 
-    console.log('Successfully retrieved user email:', calendarEmail);
-   
     const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+      httpOnly: false,
+      secure: false,
+      sameSite: 'Lax',
       path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000, 
+      maxAge: 7 * 24 * 60 * 60 * 1000
     };
 
+    res.cookie('calendar_access_token', tokens.access_token, {
+      ...cookieOptions,
+      httpOnly: true
+    });
     
-    res.cookie('calendar_access_token', tokens.access_token, cookieOptions);
-    res.cookie('calendar_refresh_token', tokens.refresh_token, cookieOptions);
+    res.cookie('calendar_refresh_token', tokens.refresh_token, {
+      ...cookieOptions,
+      httpOnly: true
+    });
+    
     res.cookie('calendar_email', calendarEmail, {
-      ...cookieOptions,
-      httpOnly: false
-    });
-    res.cookie('calendar_connected', 'true', {
-      ...cookieOptions,
-      httpOnly: false
+      ...cookieOptions
     });
     
-    console.log('Cookies set successfully, redirecting to frontend');
+    res.cookie('calendar_connected', 'true', {
+      ...cookieOptions
+    });
+
+    log.success(`Calendar connected for ${calendarEmail}`);
     res.redirect(`${process.env.FRONTEND}/dashboard/reminder`);
   } catch (error) {
-    console.error('Error in Google Calendar callback:', error);
+    log.error('Calendar callback failed', error);
     res.redirect(`${process.env.FRONTEND}/dashboard/reminder?error=${encodeURIComponent(error.message)}`);
   }
 };
@@ -77,16 +88,29 @@ const getCalendarStatus = async (req, res) => {
   try {
     const email = req.cookies.calendar_email;
     const connected = req.cookies.calendar_connected;
+    const accessToken = req.cookies.calendar_access_token;
     
-    console.log('Calendar status check - Email:', email, 'Connected:', connected);
+    if (!email || !connected || !accessToken) {
+      log.error('Incomplete calendar connection', {
+        hasEmail: !!email,
+        isConnected: !!connected,
+        hasToken: !!accessToken
+      });
+    }
     
     res.json({
       connected: !!connected,
-      email: email || null
+      email: email || null,
+      hasToken: !!accessToken,
+      cookiesPresent: Object.keys(req.cookies).length > 0
     });
   } catch (error) {
-    console.error('Error checking calendar status:', error);
-    res.status(500).json({ error: 'Failed to check calendar status' });
+    log.error('Status check failed', error);
+    res.status(500).json({ 
+      error: 'Failed to check calendar status',
+      details: error.message,
+      cookiesPresent: Object.keys(req.cookies).length > 0
+    });
   }
 };
 
