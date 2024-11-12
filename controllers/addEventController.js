@@ -173,4 +173,199 @@ const addEventToCalendarAndDb = async (req, res) => {
   }
 };
 
-module.exports = { addEventToCalendarAndDb };
+const updateEventInCalendarAndDb = async (req, res) => {
+  try {
+    // Verify authentication token
+    const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({
+        message: 'Authentication token missing',
+        error: 'TOKEN_MISSING'
+      });
+    }
+
+    let userData = jwt.verify(token, process.env.SECRET_KEY);
+    const username = userData.username;
+    const eventId = req.params.eventId; 
+    const existingReminder = await Reminder.findOne({ 
+      calendarId: eventId,  
+      username 
+    });
+
+    if (!existingReminder) {
+      return res.status(404).json({
+        message: 'Event not found',
+        error: 'EVENT_NOT_FOUND'
+      });
+    }
+
+
+    const { reminderId } = req.params;
+    const { eventname, eventdesc = "", startdate, enddate } = req.body;
+    const { calendar_access_token, calendar_refresh_token, calendar_email } = req.cookies;
+
+    // Validate required fields
+    if (!calendar_access_token || !calendar_refresh_token || !calendar_email) {
+      return res.status(400).json({
+        message: 'Google Calendar not connected',
+        error: 'CALENDAR_NOT_CONNECTED'
+      });
+    }
+
+    if (!eventname || !startdate || !enddate) {
+      return res.status(400).json({
+        message: 'Missing required event fields',
+        error: 'MISSING_FIELDS'
+      });
+    }
+
+    // Validate dates
+    const startDateTime = new Date(startdate);
+    const endDateTime = new Date(enddate);
+    if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+      return res.status(400).json({
+        message: 'Invalid date format',
+        error: 'INVALID_DATE'
+      });
+    }
+
+    // // Find existing reminder
+    // const existingReminder = await Reminder.findOne({ _id: reminderId, username });
+    // if (!existingReminder) {
+    //   return res.status(404).json({
+    //     message: 'Reminder not found',
+    //     error: 'REMINDER_NOT_FOUND'
+    //   });
+    // }
+
+    // Setup Google Calendar client
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      `${process.env.BACKEND_API}/google/calendar/callback`
+    );
+
+    oauth2Client.setCredentials({
+      access_token: calendar_access_token,
+      refresh_token: calendar_refresh_token,
+    });
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    // Update event in Google Calendar
+    const event = {
+      summary: eventname,
+      description: eventdesc,
+      start: {
+        dateTime: startDateTime.toISOString(),
+        timeZone: 'America/Los_Angeles',
+      },
+      end: {
+        dateTime: endDateTime.toISOString(),
+        timeZone: 'America/Los_Angeles',
+      },
+    };
+
+    const calendarResponse = await calendar.events.update({
+      calendarId: 'primary',
+      eventId: existingReminder.calendarId,
+      resource: event,
+    });
+
+    // Update reminder in database
+    existingReminder.eventname = eventname;
+    existingReminder.eventdesc = eventdesc;
+    existingReminder.startdate = startDateTime;
+    existingReminder.enddate = endDateTime;
+
+    const updatedReminder = await existingReminder.save();
+
+    res.status(200).json({
+      message: 'Event updated successfully',
+      event: {
+        id: calendarResponse.data.id,
+        summary: eventname,
+        description: eventdesc,
+        startTime: startDateTime,
+        endTime: endDateTime,
+        reminderId: updatedReminder._id
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating event:', error);
+    res.status(error.status || 500).json({
+      message: error.message || 'Failed to update event',
+      error: error.error || 'INTERNAL_SERVER_ERROR'
+    });
+  }
+};
+
+const deleteEventFromCalendarAndDb = async (req, res) => {
+  try {
+    const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({
+        message: 'Authentication token missing',
+        error: 'TOKEN_MISSING'
+      });
+    }
+
+    let userData = jwt.verify(token, process.env.SECRET_KEY);
+    const username = userData.username;
+    const eventId = req.params.eventId;
+
+    // Find the reminder using calendarId instead of _id
+    const existingReminder = await Reminder.findOne({ 
+      calendarId: eventId,
+      username 
+    });
+
+    if (!existingReminder) {
+      return res.status(404).json({
+        message: 'Event not found',
+        error: 'EVENT_NOT_FOUND'
+      });
+    }
+
+    // Delete from Google Calendar
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      `${process.env.BACKEND_API}/google/calendar/callback`
+    );
+
+    oauth2Client.setCredentials({
+      access_token: req.cookies.calendar_access_token,
+      refresh_token: req.cookies.calendar_refresh_token,
+    });
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    await calendar.events.delete({
+      calendarId: 'primary',
+      eventId: eventId
+    });
+
+    // Delete from database using calendarId
+    await Reminder.deleteOne({ calendarId: eventId, username });
+
+    res.status(200).json({
+      message: 'Event deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    res.status(error.status || 500).json({
+      message: error.message || 'Failed to delete event',
+      error: error.error || 'INTERNAL_SERVER_ERROR'
+    });
+  }
+};
+
+
+module.exports = {
+  addEventToCalendarAndDb,
+  updateEventInCalendarAndDb,
+  deleteEventFromCalendarAndDb
+};
