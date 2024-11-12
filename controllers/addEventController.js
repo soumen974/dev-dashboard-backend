@@ -200,7 +200,7 @@ const updateEventInCalendarAndDb = async (req, res) => {
     }
 
 
-    const { reminderId } = req.params;
+    // const { reminderId } = req.params;
     const { eventname, eventdesc = "", startdate, enddate } = req.body;
     const { calendar_access_token, calendar_refresh_token, calendar_email } = req.cookies;
 
