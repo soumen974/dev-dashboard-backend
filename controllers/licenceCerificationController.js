@@ -64,7 +64,6 @@ const updateLicenceCertifications = async (req, res) => {
     }
 };
 
-
 const deleteLicenceCertifications = async (req, res) => {
     try{
         const LicenceCertifications = await licenceCertifications.findOneAndDelete({
