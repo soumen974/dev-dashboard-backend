@@ -27,7 +27,6 @@ const createOrUpdateSocials = async (req, res) => {
     }
 };
 
-
 const getSocialsInfo = async (req, res) => {
 
     try {
