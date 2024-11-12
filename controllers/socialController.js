@@ -58,7 +58,24 @@ const deleteSocialsInfo = async (req, res) => {
     }
 }
 
+const getSocialsInfoPublic = async (req, res) => {
+
+    try {
+        const { username } = req.params;
+        const socialsData =await Socials.findOne({ username}).select('-_id -username -__v -createdAt -updatedAt');
+
+        if(!socialsData){
+            return res.status(404).json({ message: 'Social information not found' });
+        }
+
+        res.status(200).json(socialsData );
+    }catch(error){
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
 module.exports = { 
+    getSocialsInfoPublic,
     createOrUpdateSocials ,
     getSocialsInfo,
     deleteSocialsInfo

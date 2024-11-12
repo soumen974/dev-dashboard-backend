@@ -114,10 +114,21 @@ const deleteSkills = async (req, res) => {
     }
 };
 
+const getLicenceCertificationsPublic = async (req, res) => {
+    try{
+        const { username } = req.params;
+        const LicenceCertifications = await licenceCertifications.find({username:username}).select('-_id -username -__v -createdAt -updatedAt');
+        res.status(200).json(LicenceCertifications);
+
+    }catch(error){
+        res.status(500).json({ message: error.message});
+    }
+};
 
 
 
 module.exports = {
+    getLicenceCertificationsPublic,
     createLicenceCertification,
     getLicenceCertifications,
     updateLicenceCertifications,

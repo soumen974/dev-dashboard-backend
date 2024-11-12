@@ -1,5 +1,6 @@
 const express = require('express');
 const {
+  getTrackInfoPublic,
   createOrUpdateTrack,
   getTrackInfo,
   deleteTrackInfo
@@ -9,6 +10,7 @@ const authenticateToken = require('../middlewares/authenticateToken'); // Middle
 const router = express.Router();
 
 router.post('/track', authenticateToken, createOrUpdateTrack);
+router.get('/track/:username', getTrackInfoPublic);
 router.get('/track', authenticateToken, getTrackInfo);
 router.delete('/track', authenticateToken, deleteTrackInfo);
 

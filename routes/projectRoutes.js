@@ -1,5 +1,7 @@
 const express = require('express');
-const {  createProject,
+const {  
+    getProjectsByUsernamePublic,
+    createProject,
     getProjectsByUsername,
     updateProject,
     deleteProject,
@@ -36,6 +38,8 @@ router.delete('/project/:id/learnings/:learningId', authenticateToken, deleteLea
 
 // Remove a skill from a specific experience by experience ID and skill ID
 router.delete('/project/:id/skills/:skillId', authenticateToken, deleteSkill);
+
+router.get('/project/:username',  getProjectsByUsernamePublic);
 
 
 
