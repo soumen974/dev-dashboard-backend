@@ -225,10 +225,32 @@ const login = [
 
 // Logout controller
 const logout = (req, res) => {
+  // Clear auth token
   res.clearCookie('token', {
-    httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'None' 
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'None'
   });
-  res.status(200).send('Logout successful');
+
+  const calendarCookies = [
+    'calendar_access_token',
+    'calendar_refresh_token',
+    'calendar_email',
+    'calendar_connected'
+  ];
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'None',
+    path: '/'
+  };
+
+  calendarCookies.forEach(cookieName => {
+    res.clearCookie(cookieName, cookieOptions);
+  });
+
+  res.status(200).json({ message: 'Logout successful' });
 };
 
 // Protected route controller

@@ -28,9 +28,15 @@ const licenceCerification = require('./routes/licenceCertificationRoutes');
 const resumeMaker = require('./routes/resumePdfMakeRoutes');
 const authRoutes = require('./routes/authRoutes');
 const classTimeTable = require('./routes/scheduleRoutes');
+const connectCalendar = require('./routes/connectCalendarRoutes');
+const calendarRoutes = require('./routes/calendarRoutes');
+const timeTable = require('./routes/timeTableRoutes');
 
 // Connect to database
 const connectDB = require('./models/db');
+
+
+
 connectDB();
 
 // Middleware setup
@@ -92,6 +98,10 @@ app.use('/devs', socials);
 app.use('/devs', service);
 app.use('/devs', licenceCerification);
 app.use('/api', classTimeTable);
+app.use('/google',connectCalendar);
+app.use('/calendar',calendarRoutes);
+app.use('/google', connectCalendar);
+app.use('/files',timeTable);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -107,5 +117,5 @@ app.use((err, req, res, next) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Dashboard backend listening at http://localhost:${PORT}`);
+  console.log(`Dashboard backend listening at ${process.env.BACKEND_API}`);
 });
