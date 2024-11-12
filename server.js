@@ -115,5 +115,5 @@ app.use((err, req, res, next) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Dashboard backend listening at http://localhost:${PORT}`);
+  console.log(`Dashboard backend listening at ${process.env.BACKEND_API}`);
 });
