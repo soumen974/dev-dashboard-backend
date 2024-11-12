@@ -7,14 +7,14 @@ const oauth2Client = new OAuth2(
   `${process.env.BACKEND_API}/google/calendar/callback` 
 );
 
-const log = {
-  error: (message, error) => {
-    console.error(`❌ ${message}`, error?.message || error);
-  },
-  success: (message) => {
-    console.log(`✓ ${message}`);
-  }
-};
+// const log = {
+//   error: (message, error) => {
+//     console.error(`❌ ${message}`, error?.message || error);
+//   },
+//   success: (message) => {
+//     console.log(`✓ ${message}`);
+//   }
+// };
 
 const connectToGoogleCalendar = (req, res) => {
   try {
@@ -29,7 +29,7 @@ const connectToGoogleCalendar = (req, res) => {
     });
     res.redirect(authUrl);
   } catch (error) {
-    log.error('Google Calendar connection failed', error);
+    // log.error('Google Calendar connection failed', error);
     res.status(500).json({ error: 'Failed to initiate Google Calendar connection' });
   }
 };
@@ -38,7 +38,7 @@ const handleGoogleCalendarCallback = async (req, res) => {
   const code = req.query.code;
   
   if (!code) {
-    log.error('Authorization failed', 'No auth code received');
+    // log.error('Authorization failed', 'No auth code received');
     return res.redirect(`${process.env.FRONTEND}/dashboard/reminder?error=no_auth_code`);
   }
 
@@ -76,10 +76,10 @@ const handleGoogleCalendarCallback = async (req, res) => {
       ...cookieOptions
     });
 
-    log.success(`Calendar connected for ${calendarEmail}`);
+    // log.success(`Calendar connected for ${calendarEmail}`);
     res.redirect(`${process.env.FRONTEND}/dashboard/reminder`);
   } catch (error) {
-    log.error('Calendar callback failed', error);
+    // log.error('Calendar callback failed', error);
     res.redirect(`${process.env.FRONTEND}/dashboard/reminder?error=${encodeURIComponent(error.message)}`);
   }
 };
@@ -90,13 +90,13 @@ const getCalendarStatus = async (req, res) => {
     const connected = req.cookies.calendar_connected;
     const accessToken = req.cookies.calendar_access_token;
     
-    if (!email || !connected || !accessToken) {
-      log.error('Incomplete calendar connection', {
-        hasEmail: !!email,
-        isConnected: !!connected,
-        hasToken: !!accessToken
-      });
-    }
+    // if (!email || !connected || !accessToken) {
+    //   log.error('Incomplete calendar connection', {
+    //     hasEmail: !!email,
+    //     isConnected: !!connected,
+    //     hasToken: !!accessToken
+    //   });
+    // }
     
     res.json({
       connected: !!connected,
@@ -105,7 +105,7 @@ const getCalendarStatus = async (req, res) => {
       cookiesPresent: Object.keys(req.cookies).length > 0
     });
   } catch (error) {
-    log.error('Status check failed', error);
+    // log.error('Status check failed', error);
     res.status(500).json({ 
       error: 'Failed to check calendar status',
       details: error.message,
