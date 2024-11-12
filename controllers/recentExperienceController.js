@@ -176,7 +176,24 @@ const removeSkill = async (req, res) => {
   }
 };
 
+const getAllExperiencesPublic = async (req, res) => {
+  try {
+    const { username } = req.params;
+    // console.log("Fetching experiences for username:", username);
+
+    // Use the 'username' field instead of '_id' to query the database
+    const experiences = await recentExperience.find({ username: username }).select('-_id -username -__v -createdAt -updatedAt');
+
+    res.status(200).json(experiences);
+  } catch (err) {
+    console.error("Error fetching experiences:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
 module.exports = {
+  getAllExperiencesPublic,
   createExperience,
   getAllExperiences,
   getExperienceById,

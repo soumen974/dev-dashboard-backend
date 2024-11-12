@@ -1,5 +1,6 @@
 const express = require('express');
 const {
+    getLicenceCertificationsPublic,
     createLicenceCertification,
     getLicenceCertifications,
     updateLicenceCertifications,
@@ -25,5 +26,7 @@ router.delete('/licence-certification/:id', authenticateToken, deleteLicenceCert
 router.post('/licence-certification/:id/skill', authenticateToken, addSkills);
 
 router.delete('/licence-certification/:id/skill/:skillId', authenticateToken, deleteSkills);
+router.get('/licence-certification/:username',getLicenceCertificationsPublic );
+
 
 module.exports=router;

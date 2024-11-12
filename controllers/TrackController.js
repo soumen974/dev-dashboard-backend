@@ -38,8 +38,6 @@ const createOrUpdateTrack = async (req, res) => {
   }
 };
 
-
-
 const getTrackInfo = async (req, res) => {
   try {
     const username = req.devs.username;
@@ -55,7 +53,6 @@ const getTrackInfo = async (req, res) => {
   }
 };
 
-
 const deleteTrackInfo = async (req, res) => {
   try {
     const username = req.devs.username;
@@ -70,8 +67,26 @@ const deleteTrackInfo = async (req, res) => {
     res.status(500).json({ message: 'Server error', error });
   }
 };
+// const { username } = req.params;
+
+const getTrackInfoPublic = async (req, res) => {
+  try {
+    const { username } = req.params;
+    const trackData = await Track.findOne({ username }).select('-_id -username -__v -createdAt -updatedAt');
+
+    if (!trackData) {
+      return res.status(404).json({ message: 'Track information not found' });
+    }
+
+    res.status(200).json( trackData );
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+};
+
 
 module.exports = {
+  getTrackInfoPublic,
   createOrUpdateTrack,
   getTrackInfo,
   deleteTrackInfo

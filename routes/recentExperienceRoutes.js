@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {
+  getAllExperiencesPublic,
   createExperience,
   getAllExperiences,
   getExperienceById,
@@ -44,5 +45,8 @@ router.delete('/:id/learnings/:learningId', authenticateToken, removeLearning);
 
 // Remove a skill from a specific experience by experience ID and skill ID
 router.delete('/:id/skills/:skillId', authenticateToken, removeSkill);
+
+router.get('/exp/:username',  getAllExperiencesPublic);
+
 
 module.exports = router;
