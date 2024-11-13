@@ -44,7 +44,7 @@ app.use(cors({
   origin: [
     'http://localhost:3000', 
     'https://foxdash.vercel.app',
-    'https://myportfoliofoxdash.vercel.app/'
+    'https://myportfoliofoxdash.vercel.app'
   ],
   credentials: true,
   methods: ['POST', 'GET', 'DELETE', 'PUT'],
