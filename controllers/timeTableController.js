@@ -1,5 +1,71 @@
 const XLSX = require('xlsx');
+const { google } = require('googleapis');
 const Timetable = require('../models/Timetable');
+
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = `${process.env.BACKEND_API}/google/calendar/callback`;
+
+const createCalendarEvents = async (timetableData, cookies) => {
+  const oauth2Client = new google.auth.OAuth2(
+    CLIENT_ID,
+    CLIENT_SECRET,
+    REDIRECT_URI
+  );
+
+  oauth2Client.setCredentials({
+    access_token: cookies.calendar_access_token,
+    refresh_token: cookies.calendar_refresh_token
+  });
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+  const nextMonday = new Date();
+  nextMonday.setDate(nextMonday.getDate() + (8 - nextMonday.getDay()) % 7);
+
+  const weekDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+  const events = [];
+
+  for (const entry of timetableData) {
+    for (const day of weekDays) {
+      if (entry[day] && entry[day].length > 0 && entry[day] !== 'LUNCH') {
+        const [hours, minutes] = entry.TIME.split(':');
+        const startDate = new Date(nextMonday);
+        startDate.setDate(nextMonday.getDate() + weekDays.indexOf(day));
+        startDate.setHours(parseInt(hours), parseInt(minutes), 0);
+
+        const endDate = new Date(startDate);
+        endDate.setHours(startDate.getHours() + 1);
+
+        events.push({
+          summary: entry[day],
+          description: `Class Schedule - ${entry[day]}`,
+          start: {
+            dateTime: startDate.toISOString(),
+            timeZone: 'Asia/Kolkata'
+          },
+          end: {
+            dateTime: endDate.toISOString(),
+            timeZone: 'Asia/Kolkata'
+          },
+          recurrence: ['RRULE:FREQ=WEEKLY;COUNT=16'],
+          reminders: {
+            useDefault: false,
+            overrides: [{ method: 'popup', minutes: 10 }]
+          }
+        });
+      }
+    }
+  }
+
+  return Promise.all(
+    events.map(event =>
+      calendar.events.insert({
+        calendarId: 'primary',
+        resource: event
+      })
+    )
+  );
+};
 
 const timetableController = {
   uploadTimetable: async (req, res) => {
@@ -16,19 +82,13 @@ const timetableController = {
           const rowData = {};
           headers.forEach((header, index) => {
             const cellValue = row[index];
-            if (cellValue && typeof cellValue === 'string') {
-              rowData[header] = cellValue.trim();
-            } else {
-              rowData[header] = '';
-            }
+            rowData[header] = cellValue && typeof cellValue === 'string' ? cellValue.trim() : '';
           });
           return rowData;
         })
-        .filter(row => {
-          return Object.entries(row).some(([key, value]) => {
-            return key !== 'TIME' && value && value.length > 0 && value !== 'LUNCH';
-          });
-        });
+        .filter(row => Object.entries(row).some(([key, value]) => 
+          key !== 'TIME' && value && value.length > 0 && value !== 'LUNCH'
+        ));
 
       const newTimetable = new Timetable({
         filePath: req.file.path,
@@ -39,23 +99,54 @@ const timetableController = {
 
       await newTimetable.save();
 
-      res.status(200).json({ 
+      if (req.cookies.calendar_access_token) {
+        await createCalendarEvents(formattedData, req.cookies);
+      }
+
+      res.status(200).json({
         success: true,
-        message: 'Timetable uploaded successfully',
-        data: {
-          headers: headers,
-          rows: formattedData
-        }
+        message: 'Timetable uploaded successfully and synced with Google Calendar',
+        data: { headers, rows: formattedData }
       });
     } catch (error) {
       console.log('Upload error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: 'Error uploading timetable',
-        error: error.message 
+        error: error.message
       });
     }
   },
+
+  syncWithGoogleCalendar: async (req, res) => {
+    try {
+      const timetable = await Timetable.findOne({ userId: req.devs.id })
+        .sort({ createdAt: -1 });
+
+      if (!timetable || !timetable.data) {
+        return res.status(404).json({
+          success: false,
+          message: 'No timetable data found'
+        });
+      }
+
+      const results = await createCalendarEvents(timetable.data, req.cookies);
+
+      res.status(200).json({
+        success: true,
+        message: 'Timetable synced with Google Calendar',
+        events: results.map(r => r.data)
+      });
+    } catch (error) {
+      console.error('Calendar sync error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to sync with Google Calendar',
+        error: error.message
+      });
+    }
+  },
+
   getTimetableData: async (req, res) => {
     try {
       const timetable = await Timetable.findOne({ userId: req.devs.id })
@@ -78,70 +169,6 @@ const timetableController = {
       res.status(500).json({
         success: false,
         message: 'Error fetching timetable data',
-        error: error.message
-      });
-    }
-  },
-  uploadToGoogleCalendar: async (req, res) => {
-    try {
-      const timetable = await Timetable.findOne({ userId: req.devs.id })
-        .sort({ createdAt: -1 });
-
-      if (!timetable) {
-        return res.status(404).json({
-          success: false,
-          message: 'No timetable found'
-        });
-      }
-
-      const oauth2Client = new google.auth.OAuth2();
-      oauth2Client.setCredentials({
-        access_token: req.cookies.calendar_access_token
-      });
-
-      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-      const events = timetable.data.map(row => {
-        const [hours, minutes] = row.TIME.split(':');
-        const startTime = new Date();
-        startTime.setHours(parseInt(hours), parseInt(minutes), 0);
-
-        const endTime = new Date(startTime);
-        endTime.setHours(startTime.getHours() + 1); // Assuming 1-hour classes
-
-        return {
-          summary: row[req.body.day], // e.g., "DWDM"
-          description: 'Class Schedule',
-          start: {
-            dateTime: startTime.toISOString(),
-            timeZone: 'Asia/Kolkata'
-          },
-          end: {
-            dateTime: endTime.toISOString(),
-            timeZone: 'Asia/Kolkata'
-          },
-          recurrence: ['RRULE:FREQ=WEEKLY']
-        };
-      });
-
-      const results = await Promise.all(
-        events.map(event => calendar.events.insert({
-          calendarId: 'primary',
-          resource: event
-        }))
-      );
-
-      res.status(200).json({
-        success: true,
-        message: 'Timetable synced with Google Calendar',
-        events: results.map(r => r.data)
-      });
-
-    } catch (error) {
-      console.error('Calendar sync error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to sync with Google Calendar',
         error: error.message
       });
     }
