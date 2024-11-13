@@ -30,7 +30,7 @@ const authRoutes = require('./routes/authRoutes');
 const classTimeTable = require('./routes/scheduleRoutes');
 const connectCalendar = require('./routes/connectCalendarRoutes');
 const calendarRoutes = require('./routes/calendarRoutes');
-const timeTable = require('./routes/timeTableRoutes');
+const timeTableRoutes = require('./routes/timeTableRoutes');
 
 // Connect to database
 const connectDB = require('./models/db');
@@ -101,7 +101,7 @@ app.use('/api', classTimeTable);
 app.use('/google',connectCalendar);
 app.use('/calendar',calendarRoutes);
 app.use('/google', connectCalendar);
-app.use('/files',timeTable);
+app.use('/api', timeTableRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

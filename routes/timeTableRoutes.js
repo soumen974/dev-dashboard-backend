@@ -1,11 +1,42 @@
-const express = require("express");
-const multer = require("multer");
-const { convertExcelToCsv } = require("../controllers/timeTableController");
-
+const express = require('express');
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
+const multer = require('multer');
+const timetableController = require('../controllers/timeTableController');
+const authenticateToken = require('../middlewares/authenticateToken');
 
-// Route to upload and convert the Excel file to CSV
-router.post("/upload", upload.single("file"), convertExcelToCsv);
+// Configure multer storage for Excel files
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
+  }
+});
+
+// Excel file filter
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+      file.mimetype === 'application/vnd.ms-excel') {
+    cb(null, true);
+  } else {
+    cb(new Error('Only Excel files are allowed'), false);
+  }
+};
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
+
+// Route for uploading timetable
+router.post('/upload-timetable', authenticateToken, upload.single('file'), timetableController.uploadTimetable);
+router.get('/timetable-data', authenticateToken, timetableController.getTimetableData);
+router.post('/sync-calendar', authenticateToken, timetableController.uploadToGoogleCalendar);
+
 
 module.exports = router;
