@@ -33,10 +33,9 @@ const upload = multer({
   }
 });
 
-// Route for uploading timetable
+// Routes
 router.post('/upload-timetable', authenticateToken, upload.single('file'), timetableController.uploadTimetable);
 router.get('/timetable-data', authenticateToken, timetableController.getTimetableData);
-router.post('/sync-calendar', authenticateToken, timetableController.uploadToGoogleCalendar);
-
+router.post('/sync-calendar', authenticateToken, timetableController.syncWithGoogleCalendar);
 
 module.exports = router;
