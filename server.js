@@ -40,17 +40,39 @@ const connectDB = require('./models/db');
 connectDB();
 
 // Middleware setup
-app.use(cors({
-  origin: [
-    'http://localhost:3000', 
-    'https://foxdash.vercel.app',
-    'https://myportfoliofoxdash.vercel.app/'
-  ],
-  credentials: true,
-  methods: ['POST', 'GET', 'DELETE', 'PUT'],
-  optionsSuccessStatus: 200
-}));
+const corsOptionsDelegate = function (req, callback) {
+  let corsOptions;
+  
+  // For authenticated CRUD operations
+  if (req.header('Origin') === 'http://localhost:3000' || 
+      req.header('Origin') === 'https://foxdash.vercel.app') {
+    corsOptions = {
+      origin: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      credentials: true,
+      optionsSuccessStatus: 200
+    }
+  } 
+  // For public GET only
+  else if (req.header('Origin') === 'https://myportfoliofoxdash.vercel.app') {
+    corsOptions = {
+      origin: true,
+      methods: ['GET'],
+      credentials: false,  // No authentication needed
+      optionsSuccessStatus: 200
+    }
+  }
+  // For any other origin, deny access
+  else {
+    corsOptions = {
+      origin: false
+    }
+  }
+  
+  callback(null, corsOptions);
+}
 
+app.use(cors(corsOptionsDelegate));
 app.use(express.json());
 app.use(cookieParser());
 app.use(bodyParser.json());
