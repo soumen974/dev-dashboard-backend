@@ -1,6 +1,6 @@
 const XLSX = require('xlsx');
 const { google } = require('googleapis');
-const Timetable = require('../models/timetable');
+const Timetable = require('../models/timeTable');
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
