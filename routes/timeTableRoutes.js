@@ -3,39 +3,77 @@ const router = express.Router();
 const multer = require('multer');
 const timetableController = require('../controllers/timeTableController');
 const authenticateToken = require('../middlewares/authenticateToken');
+const path = require('path');
 
-// Configure multer storage for Excel files
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/'); 
   },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
+  filename: (req, file, cb) => {
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(7);
+    const extension = file.originalname.split('.').pop();
+    cb(null, `${timestamp}-${randomString}-${file.originalname}`);
   }
 });
 
-// Excel file filter
+// Improved file filter with detailed validation
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
-      file.mimetype === 'application/vnd.ms-excel') {
+  const allowedMimeTypes = [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel'
+  ];
+  
+  if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Only Excel files are allowed'), false);
+    cb(new Error('Invalid file type. Please upload only Excel files (.xls or .xlsx)'), false);
   }
 };
 
+// Enhanced multer configuration
 const upload = multer({ 
-  storage: storage,
-  fileFilter: fileFilter,
+  storage,
+  fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 10 * 1024 * 1024,
+    files: 1
   }
-});
+}).single('file');
+
+// Enhanced error handling middleware
+const handleUpload = (req, res, next) => {
+  upload(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({
+        success: false,
+        message: 'File upload error',
+        error: err.message
+      });
+    } else if (err) {
+      return res.status(400).json({
+        success: false,
+        message: err.message
+      });
+    }
+    next();
+  });
+};
 
 // Routes
-router.post('/upload-timetable', authenticateToken, upload.single('file'), timetableController.uploadTimetable);
-router.get('/timetable-data', authenticateToken, timetableController.getTimetableData);
-router.post('/sync-calendar', authenticateToken, timetableController.syncWithGoogleCalendar);
+router.post(
+  '/upload-timetable', 
+  authenticateToken, 
+  handleUpload,
+  timetableController.uploadTimetable
+);
+
+router.get(
+  '/timetable-data', 
+  authenticateToken, 
+  timetableController.getTimetableData
+);
+
+
 
 module.exports = router;
